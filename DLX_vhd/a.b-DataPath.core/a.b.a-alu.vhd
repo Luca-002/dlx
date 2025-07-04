@@ -34,6 +34,8 @@ architecture struct of alu is
 		S :		out	std_logic_vector(NBIT-1 downto 0);
 		Cout :	out	std_logic);
         end component;
+
+
     component shifter is 
     generic(N: integer);
 	port(	A: in std_logic_vector(N-1 downto 0);
@@ -161,7 +163,7 @@ architecture struct of alu is
                     DATA_OUT <= shifter_out;
                 when ALU_AND | ALU_NAND | ALU_OR | ALU_NOR | ALU_XOR | ALU_XNOR =>  
                     DATA_OUT <= logic_out;
-                when MUL =>  
+                when MULT =>  
                     DATA_OUT <= multiplier_out;
                 when others =>
                     DATA_OUT <= (others => '0');

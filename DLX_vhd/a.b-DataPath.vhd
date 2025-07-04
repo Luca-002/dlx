@@ -4,39 +4,60 @@ use ieee.std_logic_unsigned.all;
 use ieee.std_logic_arith.all;
 use work.myTypes.all;
 
-entity DataPath is   --TODO: add enable to registers, change sontrol signals
+entity DataPath is   
     generic(
         DATA_WIDTH: integer:=32;
-        NBIT_IMMEDIATE: integer :=16;
         ADDR_WIDTH: integer:= 5
     );
     port(
         CLK 					: in std_logic;
-		RST 					: in std_logic;
-		INP1 					: in std_logic_vector(DATA_WIDTH-1 downto 0);		
-		INP2 					: in std_logic_vector(DATA_WIDTH-1 downto 0);				
+		RST 					: in std_logic;	
+        --IF
+        IR_LATCH_EN        : in std_logic;
+        INSTRUCTION        : in std_logic_vector(DATA_WIDTH-1 downto 0);
+        PC_LATCH_EN        : in std_logic; 
+        PC_TO_IRAM               : out std_logic_vector(DATA_WIDTH-1 downto 0);
+        --DE
+        I_J                : in std_logic;
+        RegA_LATCH_EN      : in std_logic;  
+        RegB_LATCH_EN      : in std_logic;  
+        RegIMM_LATCH_EN    : in std_logic;  
 		RS1 					: in std_logic_vector(ADDR_WIDTH-1 downto 0);	
 		RS2 					: in std_logic_vector(ADDR_WIDTH-1 downto 0);	
 		RD 						: in std_logic_vector(ADDR_WIDTH-1 downto 0);
-        EN2                     : in std_logic;    
-        RF1                     : in std_logic;
-        RF2                     : in std_logic; 
-        EN3                     : in std_logic;  
-        S1                      : in std_logic;  
-        S2                      : in std_logic;  
-        op                      : in aluOp;
-        EN4                     : in std_logic;  
-        RM                      : in std_logic;
-        WM                      : in std_logic;  
-        S3                      : in std_logic;  
-        WF1                     : in std_logic;
-        
+        RFR1_EN                     : in std_logic;
+        RFR2_EN                     : in std_logic; 
+        RF_EN                       :in std_logic;
+
+        --EX
+        ALU_OUTREG_EN      : in std_logic;  
+        MUX_B                      : in std_logic;  
+        MUX_A                     : in std_logic;  
+        op                      : in aluOp; 
+        MEM_LATCH_EN      : in std_logic;
+        EQ_COND            : in std_logic;
+        --MEM
+        JUMP_EN        : in std_logic;
+        LMD_LATCH_EN       : in std_logic;
+        SEL_MEM_ALU                      : in std_logic;  
         DATA_FROM_MEM           : in std_logic_vector(DATA_WIDTH-1 downto 0);
-        PC_TO_MEM               : out std_logic_vector(DATA_WIDTH-1 downto 0);
+        
         DATA_TO_MEM                : out std_logic_vector(DATA_WIDTH-1 downto 0);
-        MEM_ADDRESS             : out std_logic_vector((ADDR_WIDTH**2)-1 downto 0));  
+        MEM_ADDRESS             : out std_logic_vector((ADDR_WIDTH**2)-1 downto 0);
+        --WB
+        RF_WE                     : in std_logic);
 end DataPath;
 architecture struct of DataPath is
+
+    function or_reduce(v: std_logic_vector) return std_logic is
+		variable res: std_logic := '0';
+	  begin
+		for i in v'range loop
+		  res := res or v(i);
+		end loop;
+		return res;
+	  end function;
+
 
     component register_file is
         generic (
@@ -63,6 +84,7 @@ architecture struct of DataPath is
 	Port (	D:	In	std_logic_vector(N-1 downto 0);
 		CK:	In	std_logic;
 		RESET:	In	std_logic;
+        EN    : in  std_logic;   
 		Q:	Out	std_logic_vector(N-1 downto 0));
         end component;
 
@@ -99,19 +121,35 @@ architecture struct of DataPath is
 		Cout :	out	std_logic);
         end component;
     
-    signal pc, pc_next : std_logic_vector(DATA_WIDTH-1 downto 0);    
+    signal IMM_I_TYPE,IMM_J_TYPE,imm_i_ext, imm_j_ext,imm_to_be_stored: std_logic_vector(DATA_WIDTH-1 downto 0);
+    signal pc, pc_next,cur_instruction : std_logic_vector(DATA_WIDTH-1 downto 0);    
     signal pc_plus4 : std_logic_vector(DATA_WIDTH-1 downto 0);
     signal rd1,rd2,rd3: STD_LOGIC_VECTOR(0 DOWNTO 0);
     signal rf_out1, rf_out2: STD_LOGIC_VECTOR(DATA_WIDTH-1 downto 0);
-    signal in1,A,B,in2: STD_LOGIC_VECTOR(DATA_WIDTH-1 downto 0);
-    signal alu_in1, alu_in2: STD_LOGIC_VECTOR(DATA_WIDTH-1 downto 0);
+    signal in1,A,B,im: STD_LOGIC_VECTOR(DATA_WIDTH-1 downto 0);
+    signal eq_tmp: STD_LOGIC_VECTOR(DATA_WIDTH-1 downto 0);
+    signal eq,not_eq,branch_cond: STD_LOGIC_VECTOR(0 downto 0);    --they're vectors just in order to be able to use the generic mux
+    signal alu_in1,alu_in2: STD_LOGIC_VECTOR(DATA_WIDTH-1 downto 0);
     signal alu_out, alu_out_reg: STD_LOGIC_VECTOR(DATA_WIDTH-1 downto 0);
+    signal jump_addr: STD_LOGIC_VECTOR(DATA_WIDTH-1 downto 0);
     signal me: STD_LOGIC_VECTOR(DATA_WIDTH-1 downto 0);
     signal data_wb, wb_reg: STD_LOGIC_VECTOR(DATA_WIDTH-1 downto 0);
     begin
 
        --Instruction Fetch
-
+        register_ir:single_register
+         generic map(
+            N => DATA_WIDTH
+        )
+         port map(
+            D => INSTRUCTION,
+            CK => CLK,
+            RESET => RST,
+            EN => IR_LATCH_EN,
+            Q => cur_instruction
+        );
+        IMM_I_TYPE<=cur_instruction(31 downto 16);
+        IMM_J_TYPE<=cur_instruction(31 downto 7);
         register_pc: single_register
             generic map(
                 N => DATA_WIDTH
@@ -120,9 +158,10 @@ architecture struct of DataPath is
               D     => pc_next,
               CK    => CLK,
               RESET => RST,
+              EN => PC_LATCH_EN,
               Q     => pc
             );
-        PC_TO_MEM<=pc;
+        PC_TO_IRAM<=pc;
         PC_adder: adder
             generic map(
                 NBIT => DATA_WIDTH,
@@ -134,19 +173,21 @@ architecture struct of DataPath is
               Cin  => '0',
               S => pc_plus4
             );
-        register_npc: single_register
+       mux_jumpaddr_pc_plus4: mux21
          generic map(
-            N => 1
+            NBIT => DATA_WIDTH
         )
          port map(
-            D => pc_plus4,
-            CK => CLK,
-            RESET => RST,
-            Q => pc_next
-        ); --TODO: implement jumps
+            A => jump_addr,
+            B => pc_plus4,
+            SEL => JUMP_EN,
+            Y => pc_next
+        );
+         
 
        --DECODE
-
+        imm_i_ext<=(DATA_WIDTH-16-1 downto 0 =>IMM_I_TYPE(15))&IMM_I_TYPE;
+        imm_j_ext<=(DATA_WIDTH-26-1 downto 0 =>IMM_J_TYPE(25))&IMM_J_TYPE;
         registerFile: register_file
          generic map(
             DATA_WIDTH => DATA_WIDTH,
@@ -155,10 +196,10 @@ architecture struct of DataPath is
          port map(
             CLK => CLK,
             RESET => RST,
-            ENABLE => EN2,
-            RD1 => RF1,
-            RD2 => RF2,
-            WR => WF1,
+            ENABLE => RF_EN,
+            RD1 => RFR1_EN,
+            RD2 => RFR2_EN,
+            WR => RF_WE,
             ADD_WR => rd3,
             ADD_RD1 => RS1,
             ADD_RD2 => RS2,
@@ -166,19 +207,6 @@ architecture struct of DataPath is
             OUT1 => rf_out1,
             OUT2 => rf_out2
         );
-
-
-        register_in1:single_register
-         generic map(
-            N => DATA_WIDTH
-        )
-         port map(
-            D => INP1,
-            CK => CLK,
-            RESET => RST,
-            Q => in1
-        );
-
 
         register_A:single_register
          generic map(
@@ -188,6 +216,7 @@ architecture struct of DataPath is
             D => rf_out1,
             CK => CLK,
             RESET => RST,
+            EN => RegA_LATCH_EN,
             Q => A
         );
 
@@ -200,66 +229,104 @@ architecture struct of DataPath is
             D => rf_out2,
             CK => CLK,
             RESET => RST,
+            EN => RegB_LATCH_EN,
             Q => B
         );
 
+        mux_immi_immj: mux21
+         generic map(
+            NBIT => DATA_WIDTH
+        )
+         port map(
+            A => imm_i_ext,
+            B => imm_j_ext,
+            SEL => I_J,
+            Y => imm_to_be_stored
+        );
 
-        register_in2: single_register
+        register_imm: single_register
          generic map(
             N => DATA_WIDTH
         )
          port map(
-            D => INP2,
+            D => imm_to_be_stored,
             CK => CLK,
             RESET => RST,
-            Q => in2
+            EN => RegIMM_LATCH_EN,
+            Q => im
         );
 
 
-         register_rd1: single_register --using register as ff
+         register_rd1: single_register
          generic map(
-            N =>1
+            N =>ADDR_WIDTH
         )
          port map(
             D => RD,
             CK => ClK,
             RESET => rst,
+            EN => '1',
             Q => rd1
         );
 
         --EXECUTE
-
-        mux_in1_A: mux21
+        process(A,B)
+            begin
+                for i in 0 to DATA_WIDTH-1 loop
+                    eq_tmp(i)<=A(i) xor B(i);
+                end loop;
+        end process;
+        eq(0)<=or_reduce(eq_tmp);
+        not_eq<=not(eq);
+        mux_im_aluout: MUX21
          generic map(
             NBIT => DATA_WIDTH
         )
          port map(
-            A => in1,
-            B => A,
-            SEL => S1,
+            A => im,
+            B => alu_out,
+            SEL => branch_cond(0),
+            Y => jump_addr
+        );
+        mux_noteq_eq:mux21
+         generic map(
+            NBIT => 1
+        )
+         port map(
+            A => not_eq,
+            B => eq,
+            SEL => EQ_COND,
+            Y => branch_cond
+        );
+        mux_A_pc: mux21
+         generic map(
+            NBIT => DATA_WIDTH
+        )
+         port map(
+            A => A,
+            B => pc,
+            SEL => MUX_A,
             Y => alu_in1
         );
-
-
-        mux_B_in2: mux21
+        mux_B_imm: mux21
          generic map(
             NBIT => DATA_WIDTH
         )
          port map(
             A => B,
-            B => in2,
-            SEL => S2,
+            B => im,
+            SEL => MUX_B,
             Y => alu_in2
         );
 
 
-        alu_: entity work.alu
+        alu_: alu
          generic map(
             DATA_WIDTH => DATA_WIDTH
         )
          port map(
-            INP1 => INP1,
-            INP2 => INP2,
+            INP1 => alu_in1,
+            INP2 => alu_in2,
             op => op,            
             DATA_OUT =>alu_out
         );
@@ -273,6 +340,7 @@ architecture struct of DataPath is
             D => alu_out,
             CK => CLK,
             RESET => RST,
+            EN => ALU_OUTREG_EN,
             Q => alu_out_reg
         );
 
@@ -285,18 +353,20 @@ architecture struct of DataPath is
             D => B,
             CK => CLK,
             RESET => RST,
+            EN => MEM_LATCH_EN,
             Q => me
         );
 
 
         register_rd2: single_register
          generic map(
-            N => 1
+            N => ADDR_WIDTH
         )
          port map(
             D => rd1,
             CK => CLK,
             RESET => RST,
+            EN => '1',
             Q => rd2
         );
 
@@ -311,7 +381,7 @@ architecture struct of DataPath is
          port map(
             A => DATA_FROM_MEM,
             B => alu_out_reg,
-            SEL => S3,
+            SEL => SEL_MEM_ALU,
             Y => data_wb
         );
         register_memory: single_register
@@ -322,16 +392,18 @@ architecture struct of DataPath is
             D => data_wb,
             CK => CLK,
             RESET => RST,
+            EN => LMD_LATCH_EN,
             Q => wb_reg
         );
         register_rd3: single_register
          generic map(
-            N => 1
+            N => ADDR_WIDTH
         )
          port map(
             D => rd2,
             CK => CLK,
             RESET => RST,
+            EN => '1',
             Q => rd3
         );
         --WRITE BACK

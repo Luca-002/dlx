@@ -5,7 +5,6 @@ use ieee.std_logic_arith.all;
 use work.myTypes.all;
 --use ieee.numeric_std.all;
 --use work.all;
-
 entity dlx_cu is
   generic (
     MICROCODE_MEM_SIZE :     integer := 10;  -- Microcode Memory Size
@@ -21,25 +20,36 @@ entity dlx_cu is
     IR_IN              : in  std_logic_vector(IR_SIZE - 1 downto 0);
     
     -- IF Control Signal
-    EN1      : out std_logic;  --Instruction Fetch enable
+    IR_LATCH_EN        : out std_logic;  -- Instruction Register Latch Enable
+    NPC_LATCH_EN       : out std_logic;
+                                        -- NextProgramCounter Register Latch Enable
     -- ID Control Signals
-    EN2      : out std_logic;  --Decode enable
+    I_J                : out std_logic;
+    RegA_LATCH_EN      : out std_logic;  -- Register A Latch Enable
+    RegB_LATCH_EN      : out std_logic;  -- Register B Latch Enable
+    RegIMM_LATCH_EN    : out std_logic;  -- Immediate Register Latch Enable
+    RFR1_EN            : out std_logic;  --register file read 1 enable
+    RFR2_EN            :out std_logic;  --register file read 1 enable
+    RF_EN              :out std_logic;  --register file enable
+
 
     -- EX Control Signals
     MUXA_SEL           : out std_logic;  -- MUX-A Sel
     MUXB_SEL           : out std_logic;  -- MUX-B Sel
-    EN3                 : out std_logic;  -- EX enable
+    ALU_OUTREG_EN      : out std_logic;  -- ALU Output Register Enable
+    MEM_LATCH_EN      : out std_logic;
     EQ_COND            : out std_logic;  -- Branch if (not) Equal to Zero
     -- ALU Operation Code
     ALU_OPCODE         : out aluOp; -- choose between implicit or exlicit coding, like std_logic_vector(ALU_OPC_SIZE -1 downto 0);
     
     -- MEM Control Signals
     DRAM_WE            : out std_logic;  -- Data RAM Write Enable
-    EN4                : out std_logic;  -- LMD Register Latch Enable
+    LMD_LATCH_EN       : out std_logic;  -- LMD Register Latch Enable
     JUMP_EN            : out std_logic;  -- JUMP Enable Signal for PC input MUX
-    
+    PC_LATCH_EN        : out std_logic;  -- Program Counte Latch Enable
+
     -- WB Control signals
-    WB_MUX_SEL         : out std_logic;  -- Write Back MUX Sel
+    SEL_MEM_ALU         : out std_logic;  -- Write Back MUX Sel
     RF_WE              : out std_logic);  -- Register File Write Enable
 
 end dlx_cu;

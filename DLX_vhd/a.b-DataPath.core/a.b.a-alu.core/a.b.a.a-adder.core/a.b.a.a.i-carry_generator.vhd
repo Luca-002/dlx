@@ -2,7 +2,7 @@ library ieee;
 use ieee.std_logic_1164.all;
 use ieee.std_logic_unsigned.all;
 
-entity CARRY_GENERATOR is
+entity CARRY_GENERATOR is    --NEEDS TESTING
 		generic (
 			NBIT :		integer := 32;
 			NBIT_PER_BLOCK: integer := 4);
@@ -61,14 +61,21 @@ architecture struct of CARRY_GENERATOR is
 	signal g_aux: matrix;
 	signal g_array: matrix;
 	signal p_array: matrix;
+	signal B_sub: STD_LOGIC_VECTOR(NBIT-1 downto 0);
 	begin
-		first_layer:for i in 0 to NBIT-1 generate  --generation of the first layer of p and g
+		process(B)    --B xor Cin for the subtraction
+			begin
+				for i in 0 to NBIT-1 loop
+					B_sub(i)<=B(i) xor Cin;
+				end loop;
+		end process;
+		first_layer:for i in 1 to NBIT-1 generate  --generation of the first layer of p and g
 			first_gs: and_gate
-			port map(A(i), B(i), g_array(0)(i));
+			port map(A(i), B_sub(i), g_array(0)(i));
 			first_ps: xor_gate
-			port map(A(i), B(i), p_array(0)(i));
+			port map(A(i), B_sub(i), p_array(0)(i));
 		end generate first_layer;
-
+		g_array(0)(0)<=(A(0) and B_sub(0)) or ((A(0) xor B_sub(0)) and Cin);
 		rows: for i in 1 to log(NBIT)  generate
 			columns:for j in 0 to NBIT-1 generate
 				check_g:if j mod (2**i)=(2**i)-1 generate 	--every 2**i starting from 2**i -1 we want to generate a G block
