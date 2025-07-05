@@ -1,0 +1,7 @@
+v 4
+file . "TB_datapath_alu_comparator.vhd" "0e08169a2d85f88b2a5979e71bf67e5e895ce926" "20250705103552.526":
+  entity comparator_tb at 2( 1) + 0 on 23;
+  architecture behavior of comparator_tb at 9( 122) + 0 on 24;
+file . "a.b.a.d-comparator.vhd" "e70edd7709ea4106d5e539e39a699be52d56a899" "20250705103544.334":
+  entity comparator at 1( 0) + 0 on 21;
+  architecture struct of comparator at 21( 553) + 0 on 22;

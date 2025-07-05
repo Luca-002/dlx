@@ -1,0 +1,81 @@
+$date
+  Sat Jul  5 12:38:00 2025
+$end
+$version
+  GHDL v0
+$end
+$timescale
+  1 fs
+$end
+$scope module standard $end
+$upscope $end
+$scope module std_logic_1164 $end
+$upscope $end
+$scope module std_logic_arith $end
+$upscope $end
+$scope module std_logic_unsigned $end
+$upscope $end
+$scope module comparator_tb $end
+$var reg 1 ! cout $end
+$var reg 32 " sum[31:0] $end
+$var reg 1 # a_gt_or_eq_b $end
+$var reg 1 $ a_gt_b $end
+$var reg 1 % a_lt_or_eq_b $end
+$var reg 1 & a_lt_b $end
+$var reg 1 ' a_eq_b $end
+$scope module uut $end
+$var reg 1 ( cout $end
+$var reg 32 ) sum[31:0] $end
+$var reg 1 * a_gt_or_eq_b $end
+$var reg 1 + a_gt_b $end
+$var reg 1 , a_lt_or_eq_b $end
+$var reg 1 - a_lt_b $end
+$var reg 1 . a_eq_b $end
+$var reg 1 / reduced_sum $end
+$upscope $end
+$upscope $end
+$enddefinitions $end
+#0
+1!
+b00000000000000000000000000000000 "
+1#
+0$
+1%
+0&
+1'
+1(
+b00000000000000000000000000000000 )
+1*
+0+
+1,
+0-
+1.
+1/
+#10000000
+b00000000000000000000000000000001 "
+1$
+0%
+0'
+b00000000000000000000000000000001 )
+1+
+0,
+0.
+0/
+#20000000
+0!
+0#
+0$
+1%
+1&
+0(
+0*
+0+
+1,
+1-
+#30000000
+b00000000000000000000000000000000 "
+1'
+b00000000000000000000000000000000 )
+1.
+1/
+#40000000
