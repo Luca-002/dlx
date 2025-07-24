@@ -12,7 +12,7 @@ entity multiplier is
 end multiplier;
 
 architecture struct of multiplier is
-	component P4_ADDER is
+	component adder is
 		generic (
 			NBIT :		integer := 32);
 		port (
@@ -75,7 +75,7 @@ architecture struct of multiplier is
 				port map((others => '0'), positiveShifts(i*2),positiveShifts((i*2)+1),negativeShifts((i*2)+1),negativeShifts(i*2),encodedInput(i), intermediateResults((i*2)-1) );
 		end generate;
 		generate_adders: for i in 1 to (NBIT/4)-1 generate
-			adders:P4_ADDER
+			adders:adder
 				generic map (NBIT)
 				port map (intermediateResults((i*2)-2),intermediateResults((i*2)-1), '0',intermediateResults(i*2));
 		end generate;

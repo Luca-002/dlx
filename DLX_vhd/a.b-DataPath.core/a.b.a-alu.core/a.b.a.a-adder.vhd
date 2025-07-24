@@ -46,5 +46,5 @@ CARRY: CARRY_GENERATOR
 ADDER: SUM_GENERATOR 
 	generic map (NBIT_PER_BLOCK, NBIT/NBIT_PER_BLOCK)
 	port map (A, B, C_generated((NBIT/NBIT_PER_BLOCK)-1 downto 0), S);
-	Cout<=C_generated(NBIT/4);
+	Cout<=C_generated(NBIT/NBIT_PER_BLOCK);
 end struct;
