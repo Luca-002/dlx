@@ -4,7 +4,7 @@ use ieee.std_logic_unsigned.all;
 use ieee.std_logic_arith.all;
 use work.myTypes.all;
 
-entity DataPath is   
+entity DataPath is   --add NPC and use it as intput to MUX A, might need to multiply immediate addresses by 4 based on how they're calculated, need jumpÃ¨ before branch, not other way around
     generic(
         DATA_WIDTH: integer:=32;
         ADDR_WIDTH: integer:= 5
@@ -38,6 +38,7 @@ entity DataPath is
         EQ_COND            : in std_logic;
         --MEM
         JUMP_EN        : in std_logic;
+        JUMP            : in std_logic;
         LMD_LATCH_EN       : in std_logic;
         SEL_MEM_ALU                      : in std_logic;  
         DATA_FROM_MEM           : in std_logic_vector(DATA_WIDTH-1 downto 0);
@@ -122,7 +123,7 @@ architecture struct of DataPath is
         end component;
     
     signal IMM_I_TYPE,IMM_J_TYPE,imm_i_ext, imm_j_ext,imm_to_be_stored: std_logic_vector(DATA_WIDTH-1 downto 0);
-    signal pc, pc_next,cur_instruction : std_logic_vector(DATA_WIDTH-1 downto 0);    
+    signal pc, pc_next,pc_jump,cur_instruction : std_logic_vector(DATA_WIDTH-1 downto 0);    
     signal pc_plus4 : std_logic_vector(DATA_WIDTH-1 downto 0);
     signal rd1,rd2,rd3: STD_LOGIC_VECTOR(0 DOWNTO 0);
     signal rf_out1, rf_out2: STD_LOGIC_VECTOR(DATA_WIDTH-1 downto 0);
@@ -173,7 +174,7 @@ architecture struct of DataPath is
               Cin  => '0',
               S => pc_plus4
             );
-       mux_jumpaddr_pc_plus4: mux21
+       mux_jumpaddr_pcplus4: mux21
          generic map(
             NBIT => DATA_WIDTH
         )
@@ -278,14 +279,25 @@ architecture struct of DataPath is
         end process;
         eq(0)<=or_reduce(eq_tmp);
         not_eq<=not(eq);
-        mux_im_aluout: MUX21
+        
+        mux_im_pc_plus4: mux21
          generic map(
             NBIT => DATA_WIDTH
         )
          port map(
             A => im,
+            B => pc_plus4,
+            SEL => JUMP,
+            Y => pc_jump
+        );
+        mux_pc_jump_aluout: MUX21
+         generic map(
+            NBIT => DATA_WIDTH
+        )
+         port map(
+            A => pc_jump,
             B => alu_out,
-            SEL => branch_cond(0),
+            SEL => branch_cond(0) or JUMP,
             Y => jump_addr
         );
         mux_noteq_eq:mux21

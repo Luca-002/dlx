@@ -63,7 +63,7 @@ architecture struct of CARRY_GENERATOR is
 	signal p_array: matrix;
 	signal B_sub: STD_LOGIC_VECTOR(NBIT-1 downto 0);
 	begin
-		process(B)    --B xor Cin for the subtraction
+		process(B,Cin)    --B xor Cin for the subtraction
 			begin
 				for i in 0 to NBIT-1 loop
 					B_sub(i)<=B(i) xor Cin;
