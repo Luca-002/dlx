@@ -28,18 +28,18 @@ architecture behavioral of logic_unit is
                 when  ALU_XNOR  =>decoded_op<="1001";  
             end case;
             for i in 0 to NBIT-1 loop
-                tmp1(i)<=decoded_op(0) nand notA(i) nand notB(i);
+                tmp1(i)<=decoded_op(0) nand (notA(i) nand notB(i));
             end loop;
             for i in 0 to NBIT-1 loop
-                tmp2(i)<=decoded_op(0) nand notA(i) nand B(i);
+                tmp2(i)<=decoded_op(0) nand (notA(i) nand B(i));
             end loop;
             for i in 0 to NBIT-1 loop
-                tmp3(i)<=decoded_op(0) nand A(i) nand notB(i);
+                tmp3(i)<=decoded_op(0) nand (A(i) nand notB(i));
             end loop;
             for i in 0 to NBIT-1 loop
-                tmp4(i)<=decoded_op(0) nand A(i) nand B(i);
+                tmp4(i)<=decoded_op(0) nand (A(i) nand B(i));
             end loop;
-            result<=tmp1 nand tmp2 nand tmp3 nand tmp4;
+            result<=tmp1 nand (tmp2 nand (tmp3 nand tmp4));
         end process;
 
 end behavioral;
