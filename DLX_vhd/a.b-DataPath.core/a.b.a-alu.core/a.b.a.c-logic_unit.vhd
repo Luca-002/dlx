@@ -1,7 +1,7 @@
 library ieee; 
 use ieee.std_logic_1164.all;
 use ieee.std_logic_unsigned.all;
-
+use work.myTypes.all;
 entity logic_unit is    --TODO: test
     generic(NBIT: integer:=32);
     port(
@@ -17,7 +17,7 @@ architecture behavioral of logic_unit is
     begin
         notA<=not(A);
         notB<=not(B);
-        process(op)
+        process(op,A,B)
             begin
             case op is
                 when  ALU_AND   =>decoded_op<="0001";  
@@ -26,20 +26,21 @@ architecture behavioral of logic_unit is
                 when  ALU_NOR   =>decoded_op<="1000";  
                 when  ALU_XOR   =>decoded_op<="0110";  
                 when  ALU_XNOR  =>decoded_op<="1001";  
+                when others =>decoded_op<="0000";
             end case;
             for i in 0 to NBIT-1 loop
-                tmp1(i)<=decoded_op(0) nand notA(i) nand notB(i);
+                tmp1(i)<=decoded_op(0) nand (notA(i) nand notB(i));
             end loop;
             for i in 0 to NBIT-1 loop
-                tmp2(i)<=decoded_op(0) nand notA(i) nand B(i);
+                tmp2(i)<=decoded_op(1) nand (notA(i) nand B(i));
             end loop;
             for i in 0 to NBIT-1 loop
-                tmp3(i)<=decoded_op(0) nand A(i) nand notB(i);
+                tmp3(i)<=decoded_op(2) nand (A(i) nand notB(i));
             end loop;
             for i in 0 to NBIT-1 loop
-                tmp4(i)<=decoded_op(0) nand A(i) nand B(i);
+                tmp4(i)<=decoded_op(3) nand (A(i) nand B(i));
             end loop;
-            result<=tmp1 nand tmp2 nand tmp3 nand tmp4;
+            result<=tmp1 nand (tmp2 nand (tmp3 nand tmp4));
         end process;
 
 end behavioral;

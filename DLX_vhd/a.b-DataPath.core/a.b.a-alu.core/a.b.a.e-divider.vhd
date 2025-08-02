@@ -6,6 +6,7 @@ entity divider is
     generic(NBIT: integer:=32);
     port (
         clk     : in  std_logic;
+        rst     : in std_logic;
         start   : in  std_logic;
         dividend: in  std_logic_vector(NBIT-1 downto 0);
         divisor : in std_logic_vector(NBIT-1 downto 0);
@@ -38,8 +39,12 @@ architecture behavioral of divider is
     signal D, R, Q, R2, timer: std_logic_vector(NBIT-1 downto 0);
     signal adder_out: std_logic_vector(NBIT-1 downto 0);
     signal add1,add2 : std_logic_vector(NBIT-1 downto 0);
-    signal cin: std_logic_vector(0 downto 0);
+    signal cin, notr2msb: std_logic_vector(0 downto 0);
+    signal done_signal: STD_LOGIC;
+    signal notQ: STD_LOGIC_VECTOR(NBIT-1 downto 0);
     begin
+        notQ<=not(Q);
+        notr2msb<=not(R2(NBIT-1 downto NBIT-1));
         mux21_r_2r: MUX21
          generic map(
             NBIT => NBIT
@@ -47,7 +52,7 @@ architecture behavioral of divider is
          port map(
             A => Q,
             B => R2,
-            SEL => done,
+            SEL => done_signal,
             Y => add1
         );
         mux21_notr_d: MUX21
@@ -55,9 +60,9 @@ architecture behavioral of divider is
             NBIT => NBIT
         )
          port map(
-            A => not(Q),
+            A => notQ,
             B => D,
-            SEL => done,
+            SEL => done_signal,
             Y => add2
         );
         mux21_1_notr2msb: MUX21
@@ -66,8 +71,8 @@ architecture behavioral of divider is
         )
          port map(
             A => "1",
-            B => not(R2(NBIT-1 downto NBIT-1)),
-            SEL => done,
+            B => notr2msb,
+            SEL => done_signal,
             Y => cin
         );
         R2<=R(NBIT-2 downto 0) & '0' ;
@@ -82,29 +87,34 @@ architecture behavioral of divider is
         );
         process(CLK)
         begin
-            if rising_edge(CLK) then
-                if start='1' and done='1' then
-                    D <= divisor;
-                    R <= dividend(NBIT-2 downto 0) & '0';
-                    Q <= (others => '0');
-                    done <= '0';
-                    timer<=(NBIT-2 downto 0=>'0')&'1';
-                else
-                    if done='0' then
-                        if R(NBIT-1)='0' then
-                            Q<=Q(NBIT-2 downto 0) & '1' ;
-                        else
-                            Q<=Q(NBIT-2 downto 0) & '0' ;
-                        end if;
-                        R<=adder_out;
-                        timer<=timer(NBIT-2 downto 0) & '0' ;
-                        if R=(NBIT-1 downto 0=>'0') or timer=(NBIT-1 downto 0 =>'0') then
-                            done<='1';
-                            quotient<=adder_out;
-                            remainder<=R;
+            if rst='1' then
+                done<='1';
+            else
+                if rising_edge(CLK) then
+                    if start='1' and done_signal='1' then
+                        D <= divisor;
+                        R <= dividend(NBIT-2 downto 0) & '0';
+                        Q <= (others => '0');
+                        done <= '0';
+                        timer<=(NBIT-2 downto 0=>'0')&'1';
+                    else
+                        if done_signal='0' then
+                            if R(NBIT-1)='0' then
+                                Q<=Q(NBIT-2 downto 0) & '1' ;
+                            else
+                                Q<=Q(NBIT-2 downto 0) & '0' ;
+                            end if;
+                            R<=adder_out;
+                            timer<=timer(NBIT-2 downto 0) & '0' ;
+                            if R=(NBIT-1 downto 0=>'0') or timer=(NBIT-1 downto 0 =>'0') then
+                                done_signal<='1';
+                                quotient<=adder_out;
+                                remainder<=R;
+                            end if;
                         end if;
                     end if;
                 end if;
             end if;
         end process;
+        done<=done_signal;
     end behavioral;
