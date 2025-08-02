@@ -1,4 +1,7 @@
 v 4
+file . "a.b.a.d-comparator.vhd" "e70edd7709ea4106d5e539e39a699be52d56a899" "20250802045900.649":
+  entity comparator at 1( 0) + 0 on 187;
+  architecture struct of comparator at 21( 553) + 0 on 188;
 file . "TB_datapath_alu_logic.vhd" "a980280b39faaa80d3247a6d51cfaa586cb7537f" "20250801064025.280":
   entity tb_logic at 2( 2) + 0 on 182;
   architecture test of tb_logic at 13( 191) + 0 on 183;
@@ -44,3 +47,10 @@ file . "a.b.a.a-adder.core/a.b.a.a.e-ripple_carry_adder.vhd" "0e0c8b367f6905340b
 file . "a.b.a.c-logic_unit.vhd" "5809c610119f2f6a860df20e4833ba61d0017b7b" "20250731124421.953":
   entity logic_unit at 1( 0) + 0 on 159;
   architecture behavioral of logic_unit at 18( 427) + 0 on 160;
+file . "a.b.a.b-multiplier.vhd" "9d1ae45e5946ddf6a4fdf2ab560f8d3f4a3d00f9" "20250802045738.205":
+  entity multiplier at 1( 0) + 0 on 185;
+  architecture struct of multiplier at 14( 305) + 0 on 186;
+file . "TB_datapath_alu_comparator.vhd" "524a70f78a4e50e0250835d6cd999f95ba9dfcc4" "20250802051510.451":
+  entity tb_comparator at 2( 1) + 0 on 192;
+  architecture test of tb_comparator at 10( 152) + 0 on 193;
+  configuration comparatortb at 102( 2968) + 0 on 194;
