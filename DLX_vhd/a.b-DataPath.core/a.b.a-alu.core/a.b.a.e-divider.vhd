@@ -17,7 +17,7 @@ entity divider is
 end entity;
 architecture behavioral of divider is
 
-    component MUX21 is
+    component MUX21_GENERIC is
         generic (NBIT: integer:= 32);
 	    Port (	A:	In	std_logic_vector(NBIT-1 downto 0);
 		B:	In	std_logic_vector(NBIT-1 downto 0);
@@ -45,7 +45,7 @@ architecture behavioral of divider is
     begin
         notQ<=not(Q);
         notr2msb<=not(R2(NBIT-1 downto NBIT-1));
-        mux21_r_2r: MUX21
+        mux21_r_2r: MUX21_GENERIC
          generic map(
             NBIT => NBIT
         )
@@ -55,7 +55,7 @@ architecture behavioral of divider is
             SEL => done_signal,
             Y => add1
         );
-        mux21_notr_d: MUX21
+        mux21_notr_d: MUX21_GENERIC
          generic map(
             NBIT => NBIT
         )
@@ -65,7 +65,7 @@ architecture behavioral of divider is
             SEL => done_signal,
             Y => add2
         );
-        mux21_1_notr2msb: MUX21
+        mux21_1_notr2msb: MUX21_GENERIC
          generic map(
             NBIT => 1
         )
@@ -88,14 +88,14 @@ architecture behavioral of divider is
         process(CLK)
         begin
             if rst='1' then
-                done<='1';
+                done_signal<='1';
             else
                 if rising_edge(CLK) then
                     if start='1' and done_signal='1' then
                         D <= divisor;
                         R <= dividend(NBIT-2 downto 0) & '0';
                         Q <= (others => '0');
-                        done <= '0';
+                        done_signal <= '0';
                         timer<=(NBIT-2 downto 0=>'0')&'1';
                     else
                         if done_signal='0' then
