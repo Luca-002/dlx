@@ -4,7 +4,7 @@ use ieee.std_logic_unsigned.all;
 use ieee.std_logic_arith.all;
 use work.myTypes.all;
 
-entity alu is   --TODO:test
+entity alu is  
     generic(
         DATA_WIDTH: integer:=32
     );

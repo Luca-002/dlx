@@ -3,7 +3,7 @@ library IEEE;
 use IEEE.std_logic_1164.all;
 use IEEE.numeric_std.all;
 
-entity SHIFTER_GENERIC is
+entity shifter is
     generic(N: integer);
     port(
         A: in std_logic_vector(N-1 downto 0);
@@ -13,9 +13,9 @@ entity SHIFTER_GENERIC is
         SHIFT_ROTATE: in std_logic;  -- 1 = shift, 0 = rotate
         OUTPUT: out std_logic_vector(N-1 downto 0)
     );
-end entity SHIFTER_GENERIC;
+end entity shifter;
 
-architecture BEHAVIORAL of SHIFTER_GENERIC is
+architecture BEHAVIORAL of shifter is
     function rotate_left(val: std_logic_vector; shamt: integer) return std_logic_vector is
         variable temp: std_logic_vector(val'range);
     begin

@@ -10,7 +10,7 @@ end TB_shifter;
 architecture TEST of TB_shifter is
 
   -- Component declaration
-  component SHIFTER_GENERIC is
+  component shifter is
     generic (N: integer);
     port (
       A           : in std_logic_vector(N-1 downto 0);
@@ -33,7 +33,7 @@ architecture TEST of TB_shifter is
 begin
 
   -- Instantiate SHIFTER_GENERIC
-  DUT: SHIFTER_GENERIC
+  DUT: shifter
     generic map (N => 32)
     port map (
       A           => A,
@@ -89,8 +89,8 @@ end TEST;
 
 configuration SHIFTERTEST of TB_shifter is
   for TEST
-    for all: SHIFTER_GENERIC
-      use entity WORK.SHIFTER_GENERIC(BEHAVIORAL);
+    for all: shifter
+      use entity WORK.shifter(BEHAVIORAL);
     end for;
   end for;
 end SHIFTERTEST;
