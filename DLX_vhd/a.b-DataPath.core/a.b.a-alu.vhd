@@ -9,15 +9,17 @@ entity alu is
         DATA_WIDTH: integer:=32
     );
     port(
-        INP1 					: in std_logic_vector(DATA_WIDTH-1 downto 0);		
-		INP2 					: in std_logic_vector(DATA_WIDTH-1 downto 0);
+        clk                   : in std_logic;
+        INP1 					        : in std_logic_vector(DATA_WIDTH-1 downto 0);		
+		    INP2 					        : in std_logic_vector(DATA_WIDTH-1 downto 0);
         op                    : in aluOp;
-        DATA_OUT                : out std_logic_vector(DATA_WIDTH-1 downto 0);
-        A_gt_or_eq_B                : out std_logic;
+        DATA_OUT              : out std_logic_vector(DATA_WIDTH-1 downto 0);
+        A_gt_or_eq_B          : out std_logic;
         A_gt_B                : out std_logic;
-        A_lt_or_eq_B                : out std_logic;
+        A_lt_or_eq_B          : out std_logic;
         A_lt_B                : out std_logic;
-        A_eq_B                : out std_logic
+        A_eq_B                : out std_logic;
+        divider_done          : out std_logic
     );
 end alu;
 
@@ -82,6 +84,20 @@ architecture struct of alu is
         A_eq_B                : out std_logic
     );
     end component;
+
+    component divider is
+        generic(NBIT: integer:=32);
+        port (
+            clk     : in  std_logic;
+            start   : in  std_logic;
+            dividend: in  std_logic_vector(NBIT-1 downto 0);
+            divisor : in std_logic_vector(NBIT-1 downto 0);
+            quotient: out std_logic_vector(NBIT-1 downto 0);
+            remainder: out std_logic_vector(NBIT-1 downto 0);
+            done    : out std_logic
+        );
+    end component;
+
 
         signal cin_adder, cout_adder: STD_LOGIC;
         signal adder_out: STD_LOGIC_VECTOR(DATA_WIDTH-1 downto 0);
