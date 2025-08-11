@@ -14,7 +14,7 @@ entity mux is
 
 architecture beh of mux is 
   begin
-    process(sel)
+    process(sel,A,B,C,D,E)
       begin
         case sel is 
           when "000" => Y<=A;
