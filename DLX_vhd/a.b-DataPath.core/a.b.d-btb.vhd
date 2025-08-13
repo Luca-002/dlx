@@ -29,28 +29,26 @@ architecture rtl of BTB is
 
 
   signal cur_index,branch_index: std_logic_vector(BITS_INDEX-1 downto 0);
-  signal mem_pc: std_logic_vector(BITS_PC-1 downto 0);
 begin
+  cur_index<=pc(BITS_INDEX+1 downto 2);
   process(pc, start, target, valid,taken)
-
+    variable mem_pc: std_logic_vector(BITS_PC-1 downto 0);
   begin
-    cur_index<=pc(BITS_INDEX+1 downto 2);
-    mem_pc<=target(to_integer(unsigned(cur_index)));
+    mem_pc:=start(to_integer(unsigned(cur_index)));
     if (valid(to_integer(unsigned(cur_index))) = '1' and pc = mem_pc and taken(to_integer(unsigned(cur_index)))='1') then
       hit   <= '1';
-      target_pc <= mem_pc;
-    else
+      target_pc <= target(to_integer(unsigned(cur_index)));
+    else  
       hit   <= '0';
       target_pc <= (others => '0');
     end if;
   end process;
-
+  branch_index<=pc_branch(BITS_INDEX+1 downto 2);    
   update_proc: process(clk)
   begin
-    branch_index<=pc_branch(BITS_INDEX+1 downto 2);
     if rising_edge(clk) then
       if reset = '1' then
-        for i in 0 to (BITS_PC**2)-1 loop
+        for i in 0 to (BITS_INDEX**2)-1 loop
           taken(i)<='0';
           valid(i) <= '0';
           target(i)<=(others => '0');

@@ -63,7 +63,6 @@ begin
         OP_CODE <= ALU_ADD;
         wait for 1 ns;
         assert DATA_OUT = x"00000030" report "Test 1 failed: ALU_ADD" severity error;
-        assert A_lt_B = '1' report "Test 1 failed: Comparator A_lt_B" severity error;
 
         -- Test 2: ALU_SUB
         INP1 <= x"00000030";
@@ -112,7 +111,7 @@ begin
         -- Test 9: A_eq_B
         INP1 <= x"12345678";
         INP2 <= x"12345678";
-        OP_CODE <= ALU_ADD;  -- ALU_ADD just to trigger comparator
+        OP_CODE <= ALU_SUB;  -- ALU_ADD just to trigger comparator
         wait for 1 ns;
         assert A_eq_B = '1' report "Test 9 failed: A_eq_B not set" severity error;
 

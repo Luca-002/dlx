@@ -135,6 +135,9 @@ architecture struct of DataPath is
     signal jump_addr: STD_LOGIC_VECTOR(DATA_WIDTH-1 downto 0);
     signal me: STD_LOGIC_VECTOR(DATA_WIDTH-1 downto 0);
     signal data_wb, wb_reg: STD_LOGIC_VECTOR(DATA_WIDTH-1 downto 0);
+
+
+    signal branch_cond_or_jump: STD_LOGIC;
     begin
 
        --Instruction Fetch
@@ -290,6 +293,7 @@ architecture struct of DataPath is
             SEL => JUMP,
             Y => pc_jump
         );
+        branch_cond_or_jump<=branch_cond(0) or JUMP;
         mux_pc_jump_aluout: MUX21
          generic map(
             NBIT => DATA_WIDTH
@@ -297,7 +301,7 @@ architecture struct of DataPath is
          port map(
             A => pc_jump,
             B => alu_out,
-            SEL => branch_cond(0) or JUMP,
+            SEL => branch_cond_or_jump,
             Y => jump_addr
         );
         mux_noteq_eq:mux21
@@ -332,7 +336,7 @@ architecture struct of DataPath is
         );
 
 
-        alu_: alu
+        alu_instance: alu
          generic map(
             DATA_WIDTH => DATA_WIDTH
         )

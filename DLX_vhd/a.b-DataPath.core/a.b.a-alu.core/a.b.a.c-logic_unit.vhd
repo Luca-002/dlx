@@ -2,7 +2,7 @@ library ieee;
 use ieee.std_logic_1164.all;
 use ieee.std_logic_unsigned.all;
 
-library work;
+
 use work.myTypes.all;   -- This imports aluOp type
 
 entity logic_unit is
@@ -38,17 +38,17 @@ begin
         end case;
 
         for i in 0 to NBIT-1 loop
-            tmp1(i) := decoded_op(0) nand (v_notA(i) nand v_notB(i));
-            tmp2(i) := decoded_op(1) nand (v_notA(i) nand B(i));
-            tmp3(i) := decoded_op(2) nand (A(i) nand v_notB(i));
-            tmp4(i) := decoded_op(3) nand (A(i) nand B(i));
+            tmp1(i) := not(decoded_op(3) and (v_notA(i) and v_notB(i)));
+            tmp2(i) := not(decoded_op(2) and (v_notA(i) and B(i)));
+            tmp3(i) := not(decoded_op(1) and (A(i) and v_notB(i)));
+            tmp4(i) := not(decoded_op(0) and (A(i) and B(i)));
         end loop;
 
         for i in 0 to NBIT-1 loop
-            v_result(i) := tmp1(i) nand (tmp2(i) nand (tmp3(i) nand tmp4(i)));
+            v_result(i) :=not(tmp1(i) and (tmp2(i) and (tmp3(i) and tmp4(i))));
         end loop;
 
         result <= v_result;
     end process;
 
-end behavioral;
+  end behavioral;

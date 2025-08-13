@@ -18,6 +18,7 @@ entity dlx_cu is
     Rst                : in  std_logic;  -- Reset:Active-Low
     -- Instruction Register
     IR_IN              : in  std_logic_vector(IR_SIZE - 1 downto 0);
+    DIVISION_ENDED     : in  std_logic;
     
     -- IF Control Signal
     IR_LATCH_EN        : out std_logic;  -- Instruction Register Latch Enable
@@ -133,16 +134,24 @@ begin  -- dlx_cu_rtl
       aluOpcode1 <= NOP;
       aluOpcode2 <= NOP;
       aluOpcode3 <= NOP;
-    elsif Clk'event and Clk = '1' then  -- rising clock edge
-      cw1 <= cw;
-      cw2 <= cw1(CW_SIZE - 1 - 2 downto 0);
-      cw3 <= cw2(CW_SIZE - 1 - 5 downto 0);
-      cw4 <= cw3(CW_SIZE - 1 - 9 downto 0);
-      cw5 <= cw4(CW_SIZE -1 - 13 downto 0);
+    elsif Clk'event and Clk = '1' then  -- rising clock 
+      if aluOpCode3 = ALU_DIV and DIVISION_ENDED = 0 then       
+        cw1 <= (others => '0');
+        cw2 <= (others => '0');
+        cw3 <= (others => '0');
+        cw4 <= (others => '0');
+        cw5 <= (others => '0');
+      else 
+        cw1 <= cw;
+        cw2 <= cw1(CW_SIZE - 1 - 2 downto 0);
+        cw3 <= cw2(CW_SIZE - 1 - 5 downto 0);
+        cw4 <= cw3(CW_SIZE - 1 - 9 downto 0);
+        cw5 <= cw4(CW_SIZE -1 - 13 downto 0);
 
-      aluOpcode1 <= aluOpcode_i;
-      aluOpcode2 <= aluOpcode1;
-      aluOpcode3 <= aluOpcode2;
+        aluOpcode1 <= aluOpcode_i;
+        aluOpcode2 <= aluOpcode1;
+        aluOpcode3 <= aluOpcode2;
+      end if;
     end if;
   end process CW_PIPE;
 
