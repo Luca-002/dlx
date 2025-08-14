@@ -86,6 +86,7 @@ architecture dlx_cu_hw of dlx_cu is
   signal aluOpcode2: aluOp := NOP;
   signal aluOpcode3: aluOp := NOP;
 
+  signal cw_backup : std_logic_vector(CW_SIZE -1 downto 0); -- first stage
 
  
 begin  -- dlx_cu_rtl
@@ -135,23 +136,31 @@ begin  -- dlx_cu_rtl
       aluOpcode2 <= NOP;
       aluOpcode3 <= NOP;
     elsif Clk'event and Clk = '1' then  -- rising clock 
-      if aluOpCode3 = ALU_DIV and DIVISION_ENDED = 0 then       
+      if aluOpCode3 = ALU_DIV and DIVISION_ENDED = 0 then  
+        cw_backup <= cw;
         cw1 <= (others => '0');
         cw2 <= (others => '0');
-        cw3 <= (others => '0');
-        cw4 <= (others => '0');
-        cw5 <= (others => '0');
+        cw3 <= (others => '0'); 
+
+      elsif aluOpCode3 = ALU_DIV and DIVISION_ENDED = 1 then
+        cw1 <= cw_backup;
+        cw2 <= cw1(CW_SIZE - 1 - 2 downto 0);
+        cw3 <= cw2(CW_SIZE - 1 - 5 downto 0);
+
       else 
         cw1 <= cw;
         cw2 <= cw1(CW_SIZE - 1 - 2 downto 0);
         cw3 <= cw2(CW_SIZE - 1 - 5 downto 0);
-        cw4 <= cw3(CW_SIZE - 1 - 9 downto 0);
-        cw5 <= cw4(CW_SIZE -1 - 13 downto 0);
+
 
         aluOpcode1 <= aluOpcode_i;
         aluOpcode2 <= aluOpcode1;
         aluOpcode3 <= aluOpcode2;
       end if;
+
+      cw4 <= cw3(CW_SIZE - 1 - 9 downto 0);
+      cw5 <= cw4(CW_SIZE -1 - 13 downto 0);
+
     end if;
   end process CW_PIPE;
 
