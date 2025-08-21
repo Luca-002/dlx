@@ -1,7 +1,7 @@
 library ieee;
 use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
-
+--TODO:add sign extention for negative numbers
 entity divider is
     generic(NBIT: integer:=32);
     port (
