@@ -121,7 +121,26 @@ architecture struct of DataPath is
 		S :		out	std_logic_vector(NBIT-1 downto 0);
 		Cout :	out	std_logic);
         end component;
-    
+   
+        component BTB is
+      generic (
+        BITS_PC   : integer := 32;  
+        BITS_INDEX  : integer := 6   
+      );
+      port (
+        clk: in  std_logic;
+        reset: in  std_logic;
+        pc: in  std_logic_vector(BITS_PC-1 downto 0);
+        pc_branch: in  std_logic_vector(BITS_PC-1 downto 0);
+        branch_taken: in  std_logic;
+        target_branch: in  std_logic_vector(BITS_PC-1 downto 0);
+        update: in  std_logic; 
+        hit: out std_logic;
+        target_pc: out std_logic_vector(BITS_PC-1 downto 0)
+      );
+        end component;
+
+
     signal IMM_I_TYPE,IMM_J_TYPE,imm_i_ext, imm_j_ext,imm_to_be_stored: std_logic_vector(DATA_WIDTH-1 downto 0);
     signal pc, pc_next,pc_jump,cur_instruction : std_logic_vector(DATA_WIDTH-1 downto 0);    
     signal pc_plus4 : std_logic_vector(DATA_WIDTH-1 downto 0);
