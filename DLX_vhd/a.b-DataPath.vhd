@@ -103,6 +103,8 @@ architecture struct of DataPath is
         DATA_WIDTH: integer:=32
     );
     port(
+        CLK:       in std_logic;
+        rst:       in std_logic;
         INP1 					: in std_logic_vector(DATA_WIDTH-1 downto 0);		
 		INP2 					: in std_logic_vector(DATA_WIDTH-1 downto 0);
         op                    : in aluOp;
@@ -121,6 +123,7 @@ architecture struct of DataPath is
 		S :		out	std_logic_vector(NBIT-1 downto 0);
 		Cout :	out	std_logic);
         end component;
+
     
     component BTB is
     generic (
@@ -128,6 +131,7 @@ architecture struct of DataPath is
         BITS_INDEX  : integer := 6   
     );
     port (
+
         clk: in  std_logic;
         reset: in  std_logic;
         pc: in  std_logic_vector(BITS_PC-1 downto 0);
@@ -137,8 +141,10 @@ architecture struct of DataPath is
         update: in  std_logic; 
         hit: out std_logic;
         target_pc: out std_logic_vector(BITS_PC-1 downto 0)
+
     );
     end component;
+
 
     signal IMM_I_TYPE,IMM_J_TYPE,imm_i_ext, imm_j_ext,imm_to_be_stored: std_logic_vector(DATA_WIDTH-1 downto 0);
     signal pc, pc_next,pc_jump,cur_instruction : std_logic_vector(DATA_WIDTH-1 downto 0);    
@@ -432,6 +438,8 @@ architecture struct of DataPath is
             DATA_WIDTH => DATA_WIDTH
         )
          port map(
+            CLK => CLK,
+            rst => RST,
             INP1 => alu_in1,
             INP2 => alu_in2,
             op => op,            
