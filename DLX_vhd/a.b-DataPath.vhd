@@ -152,7 +152,6 @@ architecture struct of DataPath is
     signal rd1,rd2,rd3: STD_LOGIC_VECTOR(0 DOWNTO 0);
     signal rf_out1, rf_out2: STD_LOGIC_VECTOR(DATA_WIDTH-1 downto 0);
     signal in1,A,B,im: STD_LOGIC_VECTOR(DATA_WIDTH-1 downto 0);
-    signal eq_tmp: STD_LOGIC_VECTOR(DATA_WIDTH-1 downto 0);
     signal eq,not_eq,branch_cond: STD_LOGIC_VECTOR(0 downto 0);    --they're vectors just in order to be able to use the generic mux
     signal alu_in1,alu_in2: STD_LOGIC_VECTOR(DATA_WIDTH-1 downto 0);
     signal alu_out, alu_out_reg: STD_LOGIC_VECTOR(DATA_WIDTH-1 downto 0);
@@ -371,13 +370,7 @@ architecture struct of DataPath is
         );
 
         --EXECUTE
-        process(A,B)
-            begin
-                for i in 0 to DATA_WIDTH-1 loop
-                    eq_tmp(i)<=A(i) xor B(i);
-                end loop;
-        end process;
-        eq(0)<=or_reduce(eq_tmp);
+        eq(0)<=or_reduce(A);
         not_eq<=not(eq);
         
         mux_im_pc_plus4: mux21
