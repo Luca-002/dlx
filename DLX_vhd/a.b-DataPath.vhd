@@ -103,6 +103,8 @@ architecture struct of DataPath is
         DATA_WIDTH: integer:=32
     );
     port(
+        CLK:       in std_logic;
+        rst:       in std_logic;
         INP1 					: in std_logic_vector(DATA_WIDTH-1 downto 0);		
 		INP2 					: in std_logic_vector(DATA_WIDTH-1 downto 0);
         op                    : in aluOp;
@@ -436,6 +438,8 @@ architecture struct of DataPath is
             DATA_WIDTH => DATA_WIDTH
         )
          port map(
+            CLK => CLK,
+            rst => RST,
             INP1 => alu_in1,
             INP2 => alu_in2,
             op => op,            
