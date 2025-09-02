@@ -18,6 +18,7 @@ entity DataPath is
         PC_LATCH_EN        : in std_logic; 
         PC_TO_IRAM               : out std_logic_vector(DATA_WIDTH-1 downto 0);
         --DE
+        sign_zero_ext      : in std_logic;
         I_J                : in std_logic;
         RegA_LATCH_EN      : in std_logic;  
         RegB_LATCH_EN      : in std_logic;  
@@ -146,13 +147,13 @@ architecture struct of DataPath is
     end component;
 
 
-    signal IMM_I_TYPE,IMM_J_TYPE,imm_i_ext, imm_j_ext,imm_to_be_stored: std_logic_vector(DATA_WIDTH-1 downto 0);
+
+    signal IMM_I_TYPE,IMM_J_TYPE,imm_i_zero_ext,imm_i_sign_ext,imm_i_ext, imm_j_ext,imm_to_be_stored: std_logic_vector(DATA_WIDTH-1 downto 0);
     signal pc, pc_next,pc_jump,cur_instruction : std_logic_vector(DATA_WIDTH-1 downto 0);    
     signal pc_plus4 : std_logic_vector(DATA_WIDTH-1 downto 0);
     signal rd1,rd2,rd3: STD_LOGIC_VECTOR(0 DOWNTO 0);
     signal rf_out1, rf_out2: STD_LOGIC_VECTOR(DATA_WIDTH-1 downto 0);
     signal in1,A,B,im: STD_LOGIC_VECTOR(DATA_WIDTH-1 downto 0);
-    signal eq_tmp: STD_LOGIC_VECTOR(DATA_WIDTH-1 downto 0);
     signal eq,not_eq,branch_cond: STD_LOGIC_VECTOR(0 downto 0);    --they're vectors just in order to be able to use the generic mux
     signal alu_in1,alu_in2: STD_LOGIC_VECTOR(DATA_WIDTH-1 downto 0);
     signal alu_out, alu_out_reg: STD_LOGIC_VECTOR(DATA_WIDTH-1 downto 0);
@@ -287,7 +288,8 @@ architecture struct of DataPath is
               Q     => hit2
             );
        --DECODE
-        imm_i_ext<=(DATA_WIDTH-16-1 downto 0 =>IMM_I_TYPE(15))&IMM_I_TYPE;
+        imm_i_zero_ext<=(DATA_WIDTH-16-1 downto 0 =>'0')&IMM_I_TYPE;
+        imm_i_sign_ext<=(DATA_WIDTH-16-1 downto 0 =>IMM_I_TYPE(15))&IMM_I_TYPE;
         imm_j_ext<=(DATA_WIDTH-26-1 downto 0 =>IMM_J_TYPE(25))&IMM_J_TYPE;
         registerFile: register_file
          generic map(
@@ -333,7 +335,16 @@ architecture struct of DataPath is
             EN => RegB_LATCH_EN,
             Q => B
         );
-
+        mux_immisign_immizero: MUX21
+        generic map(
+            NBIT => DATA_WIDTH
+        )
+         port map(
+            A => imm_i_sign_ext,
+            B => imm_i_zero_ext,
+            SEL => sign_zero_ext,
+            Y => imm_i_ext
+        );
         mux_immi_immj: mux21
          generic map(
             NBIT => DATA_WIDTH
@@ -371,13 +382,7 @@ architecture struct of DataPath is
         );
 
         --EXECUTE
-        process(A,B)
-            begin
-                for i in 0 to DATA_WIDTH-1 loop
-                    eq_tmp(i)<=A(i) xor B(i);
-                end loop;
-        end process;
-        eq(0)<=or_reduce(eq_tmp);
+        eq(0)<=or_reduce(A);
         not_eq<=not(eq);
         
         mux_im_pc_plus4: mux21
