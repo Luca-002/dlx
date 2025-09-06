@@ -148,7 +148,7 @@ architecture struct of DataPath is
 
 
     signal IMM_I_TYPE,IMM_J_TYPE,imm_i_zero_ext,imm_i_sign_ext,imm_i_ext, imm_j_ext,imm_to_be_stored: std_logic_vector(DATA_WIDTH-1 downto 0);
-    signal pc, pc_next,pc_jump,cur_instruction : std_logic_vector(DATA_WIDTH-1 downto 0);    
+    signal pc, pc_next,cur_instruction : std_logic_vector(DATA_WIDTH-1 downto 0);    
     signal pc_plus4 : std_logic_vector(DATA_WIDTH-1 downto 0);
     signal rd1,rd2,rd3: STD_LOGIC_VECTOR(0 DOWNTO 0);
     signal rf_out1, rf_out2: STD_LOGIC_VECTOR(DATA_WIDTH-1 downto 0);
@@ -159,7 +159,7 @@ architecture struct of DataPath is
     signal jump_addr: STD_LOGIC_VECTOR(DATA_WIDTH-1 downto 0);
     signal me: STD_LOGIC_VECTOR(DATA_WIDTH-1 downto 0);
     signal data_wb, wb_reg: STD_LOGIC_VECTOR(DATA_WIDTH-1 downto 0);   
-    signal branch_cond_or_jump: STD_LOGIC;
+    signal branch_cond_nor_jump: STD_LOGIC;
     signal btb_target: STD_LOGIC_VECTOR(DATA_WIDTH-1 downto 0);
     signal pc1,pc2: STD_LOGIC_VECTOR(DATA_WIDTH-1 downto 0);
     signal pc_btb_mux_out: STD_LOGIC_VECTOR(DATA_WIDTH-1 downto 0);
@@ -248,7 +248,7 @@ architecture struct of DataPath is
             reset => rst,
             pc => pc,
             pc_branch => pc2,           --now sure if it needs 1 or 2 clock cycles of delay, needs testing
-            branch_taken => branch_cond_or_jump,
+            branch_taken => branch_cond_nor_jump,
             target_branch => jump_addr,
             update => JUMP_EN,
             hit => btb_hit(0),
@@ -384,25 +384,15 @@ architecture struct of DataPath is
         eq(0)<=or_reduce(A);
         not_eq<=not(eq);
         
-        mux_im_pc_plus4: mux21
+        branch_cond_nor_jump<=branch_cond(0) nor JUMP;
+        mux_pc_plus4_aluout: MUX21
          generic map(
             NBIT => DATA_WIDTH
         )
          port map(
-            A => im,
-            B => pc_plus4,
-            SEL => JUMP,
-            Y => pc_jump
-        );
-        branch_cond_or_jump<=branch_cond(0) or JUMP;
-        mux_pc_jump_aluout: MUX21
-         generic map(
-            NBIT => DATA_WIDTH
-        )
-         port map(
-            A => pc_jump,
+            A => pc_plus4,
             B => alu_out,
-            SEL => branch_cond_or_jump,
+            SEL => branch_cond_nor_jump,
             Y => jump_addr
         );
         mux_noteq_eq:mux21
