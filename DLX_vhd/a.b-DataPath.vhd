@@ -31,6 +31,7 @@ entity DataPath is
         RF_EN                       :in std_logic;
 
         --EX
+        JAL:            in std_logic;
         ALU_OUTREG_EN      : in std_logic;  
         MUX_B                      : in std_logic;  
         MUX_A                     : in std_logic;  
@@ -148,7 +149,7 @@ architecture struct of DataPath is
 
 
     signal IMM_I_TYPE,IMM_J_TYPE,imm_i_zero_ext,imm_i_sign_ext,imm_i_ext, imm_j_ext,imm_to_be_stored: std_logic_vector(DATA_WIDTH-1 downto 0);
-    signal pc, pc_next,cur_instruction : std_logic_vector(DATA_WIDTH-1 downto 0);    
+    signal pc, pc_next,pc_alu,cur_instruction : std_logic_vector(DATA_WIDTH-1 downto 0);    
     signal pc_plus4 : std_logic_vector(DATA_WIDTH-1 downto 0);
     signal rd1,rd2,rd3: STD_LOGIC_VECTOR(0 DOWNTO 0);
     signal rf_out1, rf_out2: STD_LOGIC_VECTOR(DATA_WIDTH-1 downto 0);
@@ -164,7 +165,9 @@ architecture struct of DataPath is
     signal pc1,pc2: STD_LOGIC_VECTOR(DATA_WIDTH-1 downto 0);
     signal pc_btb_mux_out: STD_LOGIC_VECTOR(DATA_WIDTH-1 downto 0);
     signal btb_hit,hit1,hit2: STD_LOGIC_VECTOR(0 downto 0);
+    signal jal_signal,jal1,jal2: STD_LOGIC_VECTOR(0 downto 0);
     signal jump_and_nothit: STD_LOGIC;
+    signal write_address: STD_LOGIC_VECTOR(ADDR_WIDTH-1 downto 0);
     begin
 
        --Instruction Fetch
@@ -302,7 +305,7 @@ architecture struct of DataPath is
             RD1 => RFR1_EN,
             RD2 => RFR2_EN,
             WR => RF_WE,
-            ADD_WR => rd3,
+            ADD_WR => write_address,
             ADD_RD1 => RS1,
             ADD_RD2 => RS2,
             DATAIN => wb_reg,  
@@ -383,7 +386,7 @@ architecture struct of DataPath is
         --EXECUTE
         eq(0)<=or_reduce(A);
         not_eq<=not(eq);
-        
+
         branch_cond_nor_jump<=branch_cond(0) nor JUMP;
         mux_pc_plus4_aluout: MUX21
          generic map(
@@ -405,13 +408,23 @@ architecture struct of DataPath is
             SEL => EQ_COND,
             Y => branch_cond
         );
+        MUX21_pc2_pc1: MUX21
+         generic map(
+            NBIT => DATA_WIDTH
+        )
+         port map(
+            A => pc2,
+            B => pc1,
+            SEL => JAL,
+            Y => pc_alu
+        );
         mux_A_pc: mux21
          generic map(
             NBIT => DATA_WIDTH
         )
          port map(
             A => A,
-            B => pc,
+            B => pc_alu,
             SEL => MUX_A,
             Y => alu_in1
         );
@@ -478,7 +491,18 @@ architecture struct of DataPath is
             EN => '1',
             Q => rd2
         );
-
+        jal_signal(0)<=JAL;
+        register_jal1: single_register
+         generic map(
+            N => 1
+        )
+         port map(
+            D => jal_signal,
+            CK => CLK,
+            RESET => RST,
+            EN => '1',
+            Q => jal1
+        );
         --MEMORY
 
         DATA_TO_MEM<=me;
@@ -515,6 +539,26 @@ architecture struct of DataPath is
             EN => '1',
             Q => rd3
         );
+        register_jal2: single_register
+         generic map(
+            N => 1
+        )
+         port map(
+            D => jal1,
+            CK => CLK,
+            RESET => RST,
+            EN => '1',
+            Q => jal2
+        );
         --WRITE BACK
-
+        MUX21_32_rd: MUX21
+         generic map(
+            NBIT => ADDR_WIDTH
+        )
+         port map(
+            A => "11111",
+            B => rd3,
+            SEL => jal2(0),
+            Y => write_address
+        );
 end struct;
