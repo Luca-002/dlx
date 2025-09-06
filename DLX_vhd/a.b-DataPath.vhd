@@ -31,7 +31,7 @@ entity DataPath is
         RF_EN                       :in std_logic;
 
         --EX
-        JAL:            in std_logic;
+        
         ALU_OUTREG_EN      : in std_logic;  
         MUX_B                      : in std_logic;  
         MUX_A                     : in std_logic;  
@@ -48,7 +48,9 @@ entity DataPath is
         DATA_TO_MEM                : out std_logic_vector(DATA_WIDTH-1 downto 0);
         MEM_ADDRESS             : out std_logic_vector((ADDR_WIDTH**2)-1 downto 0);
         --WB
-        RF_WE                     : in std_logic);
+        RF_WE                     : in std_logic;
+        JAL:            in std_logic
+        );
 end DataPath;
 architecture struct of DataPath is
 
@@ -159,13 +161,12 @@ architecture struct of DataPath is
     signal alu_out, alu_out_reg: STD_LOGIC_VECTOR(DATA_WIDTH-1 downto 0);
     signal jump_addr: STD_LOGIC_VECTOR(DATA_WIDTH-1 downto 0);
     signal me: STD_LOGIC_VECTOR(DATA_WIDTH-1 downto 0);
-    signal data_wb, wb_reg: STD_LOGIC_VECTOR(DATA_WIDTH-1 downto 0);   
+    signal data_wb, wb_reg, out_mux_pc_wbreg: STD_LOGIC_VECTOR(DATA_WIDTH-1 downto 0);   
     signal branch_cond_nor_jump: STD_LOGIC;
     signal btb_target: STD_LOGIC_VECTOR(DATA_WIDTH-1 downto 0);
-    signal pc1,pc2: STD_LOGIC_VECTOR(DATA_WIDTH-1 downto 0);
+    signal pc1,pc2,pc3: STD_LOGIC_VECTOR(DATA_WIDTH-1 downto 0);
     signal pc_btb_mux_out: STD_LOGIC_VECTOR(DATA_WIDTH-1 downto 0);
     signal btb_hit,hit1,hit2: STD_LOGIC_VECTOR(0 downto 0);
-    signal jal_signal,jal1,jal2: STD_LOGIC_VECTOR(0 downto 0);
     signal jump_and_nothit: STD_LOGIC;
     signal write_address: STD_LOGIC_VECTOR(ADDR_WIDTH-1 downto 0);
     begin
@@ -216,6 +217,17 @@ architecture struct of DataPath is
               RESET => RST,
               EN => '1',
               Q     => pc2
+            ); 
+        register_pc3: single_register
+            generic map(
+                N => DATA_WIDTH
+                )
+            port map(
+              D     => pc1,
+              CK    => CLK,
+              RESET => RST,
+              EN => '1',
+              Q     => pc3
             );    
         PC_TO_IRAM<=pc;
         PC_adder: adder
@@ -308,7 +320,7 @@ architecture struct of DataPath is
             ADD_WR => write_address,
             ADD_RD1 => RS1,
             ADD_RD2 => RS2,
-            DATAIN => wb_reg,  
+            DATAIN => out_mux_pc_wbreg,  
             OUT1 => rf_out1,
             OUT2 => rf_out2
         );
@@ -408,23 +420,14 @@ architecture struct of DataPath is
             SEL => EQ_COND,
             Y => branch_cond
         );
-        MUX21_pc2_pc1: MUX21
-         generic map(
-            NBIT => DATA_WIDTH
-        )
-         port map(
-            A => pc2,
-            B => pc1,
-            SEL => JAL,
-            Y => pc_alu
-        );
+        
         mux_A_pc: mux21
          generic map(
             NBIT => DATA_WIDTH
         )
          port map(
             A => A,
-            B => pc_alu,
+            B => pc2,
             SEL => MUX_A,
             Y => alu_in1
         );
@@ -491,18 +494,6 @@ architecture struct of DataPath is
             EN => '1',
             Q => rd2
         );
-        jal_signal(0)<=JAL;
-        register_jal1: single_register
-         generic map(
-            N => 1
-        )
-         port map(
-            D => jal_signal,
-            CK => CLK,
-            RESET => RST,
-            EN => '1',
-            Q => jal1
-        );
         --MEMORY
 
         DATA_TO_MEM<=me;
@@ -539,17 +530,6 @@ architecture struct of DataPath is
             EN => '1',
             Q => rd3
         );
-        register_jal2: single_register
-         generic map(
-            N => 1
-        )
-         port map(
-            D => jal1,
-            CK => CLK,
-            RESET => RST,
-            EN => '1',
-            Q => jal2
-        );
         --WRITE BACK
         MUX21_32_rd: MUX21
          generic map(
@@ -558,7 +538,17 @@ architecture struct of DataPath is
          port map(
             A => "11111",
             B => rd3,
-            SEL => jal2(0),
+            SEL => JAL,
             Y => write_address
+        );
+        MUX21_pc3_wbreg: MUX21
+         generic map(
+            NBIT => DATA_WIDTH
+        )
+         port map(
+            A => pc3,
+            B => wb_reg,
+            SEL => JAL,
+            Y => out_mux_pc_wbreg
         );
 end struct;
