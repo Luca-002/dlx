@@ -25,6 +25,7 @@ architecture TEST of TB_DataPath is
             PC_LATCH_EN      : in std_logic;
             PC_TO_IRAM       : out std_logic_vector(DATA_WIDTH-1 downto 0);
             -- DE
+            sign_zero_ext    : in std_logic;  -- << added, required by DUT
             I_J              : in std_logic;
             RegA_LATCH_EN    : in std_logic;
             RegB_LATCH_EN    : in std_logic;
@@ -62,6 +63,7 @@ architecture TEST of TB_DataPath is
     signal PC_LATCH_EN      : std_logic := '0';
     signal PC_TO_IRAM       : std_logic_vector(31 downto 0);
 
+    signal sign_zero_ext    : std_logic := '0'; -- << added & driven
     signal I_J              : std_logic := '0';
     signal RegA_LATCH_EN    : std_logic := '0';
     signal RegB_LATCH_EN    : std_logic := '0';
@@ -81,7 +83,7 @@ architecture TEST of TB_DataPath is
     signal SEL_MEM_ALU      : std_logic := '0';
     signal DATA_FROM_MEM    : std_logic_vector(31 downto 0) := (others => '0');
     signal DATA_TO_MEM      : std_logic_vector(31 downto 0);
-    signal MEM_ADDRESS      : std_logic_vector((5**2)-1 downto 0);
+    signal MEM_ADDRESS      : std_logic_vector((5**2)-1 downto 0);  -- 25 bits per DUT generic
 
     signal RF_WE            : std_logic := '0';
 
@@ -100,6 +102,7 @@ begin
             INSTRUCTION   => INSTRUCTION,
             PC_LATCH_EN   => PC_LATCH_EN,
             PC_TO_IRAM    => PC_TO_IRAM,
+            sign_zero_ext => sign_zero_ext, -- << connected
             I_J           => I_J,
             RegA_LATCH_EN => RegA_LATCH_EN,
             RegB_LATCH_EN => RegB_LATCH_EN,
@@ -185,11 +188,5 @@ begin
 
 end TEST;
 
-configuration DATAPATHTEST of TB_DataPath is
-    for TEST
-        for all: DataPath
-            use entity work.DataPath(struct);
-        end for;
-    end for;
-end DATAPATHTEST;
+
 
