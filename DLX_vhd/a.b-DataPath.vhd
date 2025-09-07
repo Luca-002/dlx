@@ -17,6 +17,7 @@ entity DataPath is
         INSTRUCTION        : in std_logic_vector(DATA_WIDTH-1 downto 0);
         PC_LATCH_EN        : in std_logic; 
         PC_TO_IRAM               : out std_logic_vector(DATA_WIDTH-1 downto 0);
+        FLUSH               : out std_logic;
         --DE
         sign_zero_ext      : in std_logic;
         I_J                : in std_logic;
@@ -151,7 +152,7 @@ architecture struct of DataPath is
 
 
     signal IMM_I_TYPE,IMM_J_TYPE,imm_i_zero_ext,imm_i_sign_ext,imm_i_ext, imm_j_ext,imm_to_be_stored: std_logic_vector(DATA_WIDTH-1 downto 0);
-    signal pc, pc_next,pc_alu,cur_instruction : std_logic_vector(DATA_WIDTH-1 downto 0);    
+    signal pc, pc_next,pc_alu,pc_final,cur_instruction : std_logic_vector(DATA_WIDTH-1 downto 0);    
     signal pc_plus4 : std_logic_vector(DATA_WIDTH-1 downto 0);
     signal rd1,rd2,rd3: STD_LOGIC_VECTOR(0 DOWNTO 0);
     signal rf_out1, rf_out2: STD_LOGIC_VECTOR(DATA_WIDTH-1 downto 0);
@@ -169,6 +170,7 @@ architecture struct of DataPath is
     signal btb_hit,hit1,hit2: STD_LOGIC_VECTOR(0 downto 0);
     signal jump_and_nothit: STD_LOGIC;
     signal write_address: STD_LOGIC_VECTOR(ADDR_WIDTH-1 downto 0);
+    signal restore_pc: std_logic;
     begin
 
        --Instruction Fetch
@@ -190,7 +192,7 @@ architecture struct of DataPath is
                 N => DATA_WIDTH
                 )
             port map(
-              D     => pc_next,
+              D     => pc_final,
               CK    => CLK,
               RESET => RST,
               EN => PC_LATCH_EN,
@@ -301,6 +303,18 @@ architecture struct of DataPath is
               EN => '1',
               Q     => hit2
             );
+        FLUSH<=branch_cond_nor_jump xor hit2(0);
+        restore_pc<=hit2(0) and (not(branch_cond_nor_jump));
+         mux_pc2_pcnext: MUX21
+         generic map(
+            NBIT => DATA_WIDTH
+        )
+         port map(
+            A => pc2,
+            B => pc_next,
+            SEL => restore_pc,
+            Y => pc_final
+        );
        --DECODE
         imm_i_zero_ext<=(DATA_WIDTH-16-1 downto 0 =>'0')&IMM_I_TYPE;
         imm_i_sign_ext<=(DATA_WIDTH-16-1 downto 0 =>IMM_I_TYPE(15))&IMM_I_TYPE;
