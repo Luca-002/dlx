@@ -12,9 +12,11 @@ entity alu is   --TODO:test
         CLK                     : in std_logic;
         RST                     : in std_logic;
         INP1 					: in std_logic_vector(DATA_WIDTH-1 downto 0);		
-		INP2 					: in std_logic_vector(DATA_WIDTH-1 downto 0);
+		    INP2 					: in std_logic_vector(DATA_WIDTH-1 downto 0);
         op                    : in aluOp;
-        DATA_OUT                : out std_logic_vector(DATA_WIDTH-1 downto 0)
+        DATA_OUT                : out std_logic_vector(DATA_WIDTH-1 downto 0);
+        DONE_DIV                : out std_logic;
+        DONE_MUL                : out std_logic
     );
 end alu;
 
@@ -117,6 +119,7 @@ architecture struct of alu is
         signal div_quotient, div_remainder: STD_LOGIC_VECTOR(DATA_WIDTH -1 downto 0);
         signal div_start, div_done: STD_LOGIC;
         signal A_ge_u, A_gt_u, A_le_u, A_lt_u: STD_LOGIC;
+        signal multiplier_finished_tracker: STD_LOGIC_VECTOR(1 downto 0); 
     begin
     cin_adder<= '1' when op = ALU_SUB else '0';
         
@@ -201,7 +204,7 @@ architecture struct of alu is
     );    
        process(op, adder_out, shifter_out, multiplier_out, logic_out,
         A_eq_B, A_gt_or_eq_B, A_gt_B, A_lt_or_eq_B, A_lt_B,
-        A_ge_u, A_gt_u, A_lt_u)  
+        A_ge_u, A_gt_u, A_lt_u, clk, rst)  
         begin
             case op is
                 when NOP =>  
@@ -211,7 +214,7 @@ architecture struct of alu is
                 when ALU_ADD | ALU_SUB => 
                     DATA_OUT <= adder_out;
             
-                when LLS | LRS | ALS | ARS | RR | RL =>  
+                when LLS | LRS | ALS | ARS | RR | RL => 
                     DATA_OUT <= shifter_out;
             
                 when ALU_AND | ALU_NAND | ALU_OR | ALU_NOR | ALU_XOR | ALU_XNOR =>  
@@ -219,6 +222,7 @@ architecture struct of alu is
             
                 when MULT =>  
                     DATA_OUT <= multiplier_out;
+                    
 
                 when SEQ =>  
                     if A_eq_B = '1' then
@@ -286,7 +290,27 @@ architecture struct of alu is
                 when others =>
                     DATA_OUT <= (others => '0');
             end case;
+
         end process;
+
+
+
+process(clk, rst)
+begin
+    if rst = '1' then
+        multiplier_finished_tracker <= (others => '0');
+        DONE_MUL <= '0';
+    elsif rising_edge(clk) then
+        if op = MULT then
+            multiplier_finished_tracker(0) <= '1';
+        else
+            multiplier_finished_tracker(0) <= '0';
+        end if;
+
+        DONE_MUL <= multiplier_finished_tracker(1);
+        multiplier_finished_tracker(1) <= multiplier_finished_tracker(0);
+    end if;
+end process;
 
 
     
