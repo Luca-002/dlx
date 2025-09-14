@@ -4,7 +4,7 @@ use ieee.std_logic_unsigned.all;
 use ieee.std_logic_arith.all;
 use work.myTypes.all;
 
-entity alu is   --TODO:test
+entity alu is   
     generic(
         DATA_WIDTH: integer:=32
     );
@@ -14,7 +14,9 @@ entity alu is   --TODO:test
         INP1 					: in std_logic_vector(DATA_WIDTH-1 downto 0);		
 		    INP2 					: in std_logic_vector(DATA_WIDTH-1 downto 0);
         op                    : in aluOp;
-        DATA_OUT                : out std_logic_vector(DATA_WIDTH-1 downto 0);
+        STANDARD_OUT                : out std_logic_vector(DATA_WIDTH-1 downto 0);
+        DIV_OUT                     : OUT STD_LOGIC_VECTOR(DATA_WIDTH-1 DOWNTO 0);
+        MUL_OUT                     : OUT STD_LOGIC_VECTOR(DATA_WIDTH-1 DOWNTO 0);
         DONE_DIV                : out std_logic;
         DONE_MUL                : out std_logic
     );
@@ -204,93 +206,90 @@ architecture struct of alu is
     );    
        process(op, adder_out, shifter_out, multiplier_out, logic_out,
         A_eq_B, A_gt_or_eq_B, A_gt_B, A_lt_or_eq_B, A_lt_B,
-        A_ge_u, A_gt_u, A_lt_u, clk, rst)  
+        A_ge_u, A_gt_u, A_lt_u)  
         begin
             case op is
                 when NOP =>  
-                    DATA_OUT <= (others => '0');
+                    STANDARD_OUT <= (others => '0');
                 when A =>
-                    DATA_OUT <= INP1;
+                    STANDARD_OUT <= INP1;
                 when ALU_ADD | ALU_SUB => 
-                    DATA_OUT <= adder_out;
+                    STANDARD_OUT <= adder_out;
             
                 when LLS | LRS | ALS | ARS | RR | RL => 
-                    DATA_OUT <= shifter_out;
+                    STANDARD_OUT <= shifter_out;
             
                 when ALU_AND | ALU_NAND | ALU_OR | ALU_NOR | ALU_XOR | ALU_XNOR =>  
-                    DATA_OUT <= logic_out;
+                    STANDARD_OUT <= logic_out;
             
-                when MULT =>  
-                    DATA_OUT <= multiplier_out;
-                    
 
                 when SEQ =>  
                     if A_eq_B = '1' then
-                        DATA_OUT <= (DATA_WIDTH-1 downto 1 => '0') & '1';
+                        STANDARD_OUT <= (DATA_WIDTH-1 downto 1 => '0') & '1';
                     else
-                        DATA_OUT <= (others => '0');
+                        STANDARD_OUT <= (others => '0');
                     end if;
                     
                 when SNE =>  
                     if A_eq_B = '0' then
-                        DATA_OUT <= (DATA_WIDTH-1 downto 1 => '0') & '1';
+                        STANDARD_OUT <= (DATA_WIDTH-1 downto 1 => '0') & '1';
                     else
-                        DATA_OUT <= (others => '0');
+                        STANDARD_OUT <= (others => '0');
                     end if; 
                     
                 when SGE =>  
                     if A_gt_or_eq_B = '1' then
-                        DATA_OUT <= (DATA_WIDTH-1 downto 1 => '0') & '1';
+                        STANDARD_OUT <= (DATA_WIDTH-1 downto 1 => '0') & '1';
                     else
-                        DATA_OUT <= (others => '0');
+                        STANDARD_OUT <= (others => '0');
                     end if;  
                     
                 when SGT =>  
                     if A_gt_B = '1' then
-                        DATA_OUT <= (DATA_WIDTH-1 downto 1 => '0') & '1';
+                        STANDARD_OUT <= (DATA_WIDTH-1 downto 1 => '0') & '1';
                     else
-                        DATA_OUT <= (others => '0');
+                        STANDARD_OUT <= (others => '0');
                     end if;
                     
                 when SLE =>  
                     if A_lt_or_eq_B = '1' then
-                        DATA_OUT <= (DATA_WIDTH-1 downto 1 => '0') & '1';
+                        STANDARD_OUT <= (DATA_WIDTH-1 downto 1 => '0') & '1';
                     else
-                        DATA_OUT <= (others => '0');
+                        STANDARD_OUT <= (others => '0');
                     end if;
                     
                 when SLT =>  
                     if A_lt_B = '1' then
-                        DATA_OUT <= (DATA_WIDTH-1 downto 1 => '0') & '1';
+                        STANDARD_OUT <= (DATA_WIDTH-1 downto 1 => '0') & '1';
                     else
-                        DATA_OUT <= (others => '0');
+                        STANDARD_OUT <= (others => '0');
                     end if;
 
                 when SGEU =>
                     if A_ge_u = '1' then
-                        DATA_OUT <= (DATA_WIDTH-1 downto 1 => '0') & '1';
+                        STANDARD_OUT <= (DATA_WIDTH-1 downto 1 => '0') & '1';
                     else
-                        DATA_OUT <= (others => '0');
+                        STANDARD_OUT <= (others => '0');
                     end if;
                     
                 when SGTU =>
                     if A_gt_u = '1' then
-                        DATA_OUT <= (DATA_WIDTH-1 downto 1 => '0') & '1';
+                        STANDARD_OUT <= (DATA_WIDTH-1 downto 1 => '0') & '1';
                     else
-                        DATA_OUT <= (others => '0');
+                        STANDARD_OUT <= (others => '0');
                     end if;
                     
                 when SLTU =>
                     if A_lt_u = '1' then
-                        DATA_OUT <= (DATA_WIDTH-1 downto 1 => '0') & '1';
+                        STANDARD_OUT <= (DATA_WIDTH-1 downto 1 => '0') & '1';
                     else
-                        DATA_OUT <= (others => '0');
+                        STANDARD_OUT <= (others => '0');
                     end if;
                     
                 when others =>
-                    DATA_OUT <= (others => '0');
+                    STANDARD_OUT <= (others => '0');
             end case;
-
+        MUL_OUT<=multiplier_out;
         end process;
 
 
