@@ -4,22 +4,25 @@ use ieee.std_logic_unsigned.all;
 use ieee.std_logic_arith.all;
 use work.myTypes.all;
 
-entity alu is  
+
+entity alu is   
+
     generic(
         DATA_WIDTH: integer:=32
     );
     port(
-        clk                   : in std_logic;
-        INP1 					        : in std_logic_vector(DATA_WIDTH-1 downto 0);		
-		    INP2 					        : in std_logic_vector(DATA_WIDTH-1 downto 0);
+
+        CLK                     : in std_logic;
+        RST                     : in std_logic;
+        INP1 					: in std_logic_vector(DATA_WIDTH-1 downto 0);		
+		    INP2 					: in std_logic_vector(DATA_WIDTH-1 downto 0);
         op                    : in aluOp;
-        DATA_OUT              : out std_logic_vector(DATA_WIDTH-1 downto 0);
-        A_gt_or_eq_B          : out std_logic;
-        A_gt_B                : out std_logic;
-        A_lt_or_eq_B          : out std_logic;
-        A_lt_B                : out std_logic;
-        A_eq_B                : out std_logic;
-        divider_done          : out std_logic
+        STANDARD_OUT                : out std_logic_vector(DATA_WIDTH-1 downto 0);
+        DIV_OUT                     : OUT STD_LOGIC_VECTOR(DATA_WIDTH-1 DOWNTO 0);
+        MUL_OUT                     : OUT STD_LOGIC_VECTOR(DATA_WIDTH-1 DOWNTO 0);
+        DONE_DIV                : out std_logic;
+        DONE_MUL                : out std_logic
+
     );
 end alu;
 
@@ -65,6 +68,8 @@ architecture struct of alu is
     generic (
 		NBIT :		integer := 8);
 	port (
+		CLK:	in std_logic;
+		rst: 	in std_logic;
 		A :		in	std_logic_vector((NBIT/2)-1 downto 0);
 		B :		in	std_logic_vector((NBIT/2)-1 downto 0);
 		P :		out	std_logic_vector(NBIT-1 downto 0));
@@ -72,16 +77,36 @@ architecture struct of alu is
     
     component comparator is
         generic(
-        DATA_WIDTH: integer:=32
+        DATA_WIDTH: integer := 32
     );
     port(
-        cout 					: in std_logic;		
-		sum 					: in std_logic_vector(DATA_WIDTH-1 downto 0);
-        A_gt_or_eq_B                : out std_logic;
-        A_gt_B                : out std_logic;
-        A_lt_or_eq_B                : out std_logic;
-        A_lt_B                : out std_logic;
-        A_eq_B                : out std_logic
+        cout : in  std_logic;   
+        A : in  std_logic_vector(DATA_WIDTH-1 downto 0);
+        B : in  std_logic_vector(DATA_WIDTH-1 downto 0);
+        sum : in  std_logic_vector(DATA_WIDTH-1 downto 0); 
+        A_gt_or_eq_B: out std_logic;  
+        A_gt_B : out std_logic;  
+        A_lt_or_eq_B: out std_logic;  
+        A_lt_B: out std_logic;  
+        A_eq_B: out std_logic;  
+        A_ge_u: out std_logic;  
+        A_gt_u: out std_logic;  
+        A_le_u: out std_logic;  
+        A_lt_u: out std_logic   
+    );
+    end component;
+
+    component divider is
+    generic(NBIT: integer:=32);
+    port (
+        clk     : in  std_logic;
+        rst     : in std_logic;
+        start   : in  std_logic;
+        dividend: in  std_logic_vector(NBIT-1 downto 0);
+        divisor : in std_logic_vector(NBIT-1 downto 0);
+        quotient: out std_logic_vector(NBIT-1 downto 0);
+        remainder: out std_logic_vector(NBIT-1 downto 0);
+        done    : out std_logic
     );
     end component;
 
@@ -109,6 +134,12 @@ architecture struct of alu is
 
         signal multiplier_out: STD_LOGIC_VECTOR(DATA_WIDTH-1 downto 0);
 
+        signal A_gt_or_eq_B,A_gt_B,A_lt_or_eq_B,A_lt_B,A_eq_B: STD_LOGIC; 
+
+        signal div_quotient, div_remainder: STD_LOGIC_VECTOR(DATA_WIDTH -1 downto 0);
+        signal div_start, div_done: STD_LOGIC;
+        signal A_ge_u, A_gt_u, A_le_u, A_lt_u: STD_LOGIC;
+        signal multiplier_finished_tracker: STD_LOGIC_VECTOR(1 downto 0); 
     begin
     cin_adder<= '1' when op = ALU_SUB else '0';
         
@@ -151,40 +182,153 @@ architecture struct of alu is
     alu_mult: multiplier
         generic map (NBIT => DATA_WIDTH)
         port map (
+            CLK => CLK,
+            rst=> RST,
             A => INP1(DATA_WIDTH/2-1 downto 0),         
             B => INP2(DATA_WIDTH/2-1 downto 0),
             P => multiplier_out
         );
+
+    alu_div: entity work.divider
+     generic map(
+        NBIT => DATA_WIDTH
+    )
+     port map(
+        clk => clk,
+        rst => rst,
+        start => div_start,
+        dividend => INP1,
+        divisor => INP2,
+        quotient => div_quotient,
+        remainder => div_remainder,
+        done => div_done
+    );
     alu_comparator: comparator
      generic map(
         DATA_WIDTH => DATA_WIDTH
     )
      port map(
         cout => cout_adder,
+        A => INP1,
+        B => INP2,
         sum => adder_out,
         A_gt_or_eq_B => A_gt_or_eq_B,
         A_gt_B => A_gt_B,
         A_lt_or_eq_B => A_lt_or_eq_B,
         A_lt_B => A_lt_B,
-        A_eq_B => A_eq_B
+        A_eq_B => A_eq_B,
+        A_ge_u => A_ge_u,
+        A_gt_u => A_gt_u,
+        A_le_u => A_le_u,
+        A_lt_u => A_lt_u
     );    
-        process(op, adder_out, shifter_out, multiplier_out, logic_out)
+       process(op, adder_out, shifter_out, multiplier_out, logic_out,
+        A_eq_B, A_gt_or_eq_B, A_gt_B, A_lt_or_eq_B, A_lt_B,
+        A_ge_u, A_gt_u, A_lt_u)  
         begin
             case op is
                 when NOP =>  
-                    DATA_OUT <= (others => '0');
+                    STANDARD_OUT <= (others => '0');
+                when A =>
+                    STANDARD_OUT <= INP1;
                 when ALU_ADD | ALU_SUB => 
-                    DATA_OUT <= adder_out;
-                when LLS | LRS | ALS | ARS | RR | RL =>  
-                    DATA_OUT <= shifter_out;
+                    STANDARD_OUT <= adder_out;
+            
+                when LLS | LRS | ALS | ARS | RR | RL => 
+                    STANDARD_OUT <= shifter_out;
+            
                 when ALU_AND | ALU_NAND | ALU_OR | ALU_NOR | ALU_XOR | ALU_XNOR =>  
-                    DATA_OUT <= logic_out;
-                when MULT =>  
-                    DATA_OUT <= multiplier_out;
+                    STANDARD_OUT <= logic_out;
+            
+
+                when SEQ =>  
+                    if A_eq_B = '1' then
+                        STANDARD_OUT <= (DATA_WIDTH-1 downto 1 => '0') & '1';
+                    else
+                        STANDARD_OUT <= (others => '0');
+                    end if;
+                    
+                when SNE =>  
+                    if A_eq_B = '0' then
+                        STANDARD_OUT <= (DATA_WIDTH-1 downto 1 => '0') & '1';
+                    else
+                        STANDARD_OUT <= (others => '0');
+                    end if; 
+                    
+                when SGE =>  
+                    if A_gt_or_eq_B = '1' then
+                        STANDARD_OUT <= (DATA_WIDTH-1 downto 1 => '0') & '1';
+                    else
+                        STANDARD_OUT <= (others => '0');
+                    end if;  
+                    
+                when SGT =>  
+                    if A_gt_B = '1' then
+                        STANDARD_OUT <= (DATA_WIDTH-1 downto 1 => '0') & '1';
+                    else
+                        STANDARD_OUT <= (others => '0');
+                    end if;
+                    
+                when SLE =>  
+                    if A_lt_or_eq_B = '1' then
+                        STANDARD_OUT <= (DATA_WIDTH-1 downto 1 => '0') & '1';
+                    else
+                        STANDARD_OUT <= (others => '0');
+                    end if;
+                    
+                when SLT =>  
+                    if A_lt_B = '1' then
+                        STANDARD_OUT <= (DATA_WIDTH-1 downto 1 => '0') & '1';
+                    else
+                        STANDARD_OUT <= (others => '0');
+                    end if;
+
+                when SGEU =>
+                    if A_ge_u = '1' then
+                        STANDARD_OUT <= (DATA_WIDTH-1 downto 1 => '0') & '1';
+                    else
+                        STANDARD_OUT <= (others => '0');
+                    end if;
+                    
+                when SGTU =>
+                    if A_gt_u = '1' then
+                        STANDARD_OUT <= (DATA_WIDTH-1 downto 1 => '0') & '1';
+                    else
+                        STANDARD_OUT <= (others => '0');
+                    end if;
+                    
+                when SLTU =>
+                    if A_lt_u = '1' then
+                        STANDARD_OUT <= (DATA_WIDTH-1 downto 1 => '0') & '1';
+                    else
+                        STANDARD_OUT <= (others => '0');
+                    end if;
+                    
                 when others =>
-                    DATA_OUT <= (others => '0');
+                    STANDARD_OUT <= (others => '0');
             end case;
+        MUL_OUT<=multiplier_out;
         end process;
+
+
+
+process(clk, rst)
+begin
+    if rst = '1' then
+        multiplier_finished_tracker <= (others => '0');
+        DONE_MUL <= '0';
+    elsif rising_edge(clk) then
+        if op = MULT then
+            multiplier_finished_tracker(0) <= '1';
+        else
+            multiplier_finished_tracker(0) <= '0';
+        end if;
+
+        DONE_MUL <= multiplier_finished_tracker(1);
+        multiplier_finished_tracker(1) <= multiplier_finished_tracker(0);
+    end if;
+end process;
+
 
     
 end struct;

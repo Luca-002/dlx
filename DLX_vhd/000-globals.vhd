@@ -5,7 +5,7 @@ package myTypes is
 
 	type aluOp is (
 		NOP, ALU_AND, ALU_NAND, ALU_OR, ALU_NOR, ALU_XOR, ALU_XNOR, ALU_ADD, ALU_SUB, MULT, LLS, LRS, ALS, ARS, RR,
-		 RL, SGE, SLE, SNE, ADDU, SUBU, SEQ, SGEU, SGT, SGTU, SLT, SLTU
+		 RL, SGE, SLE, SNE, ADDU, SUBU, SEQ, SGEU, SGT, SGTU, SLT, SLTU, A
 			);
 	
 end myTypes;
