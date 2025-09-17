@@ -40,6 +40,8 @@ entity DataPath is
         MEM_LATCH_EN      : in std_logic;
         EQ_COND            : in std_logic;
         --MEM
+        BYTE             : in std_logic;
+       
         JUMP_EN        : in std_logic;          --true for both jump and branch
         JUMP            : in std_logic;         --true only for jump
         LMD_LATCH_EN       : in std_logic;
@@ -50,7 +52,10 @@ entity DataPath is
         MEM_ADDRESS             : out std_logic_vector((ADDR_WIDTH**2)-1 downto 0);
         --WB
         RF_WE                     : in std_logic;
-        JAL:            in std_logic
+        JAL:            in std_logic;
+        HALF_WORD        : in std_logic;
+        H_L             : in std_logic; --higher or lower part of the register
+		S_U 			: in std_logic  --signed or unsigned write back
         );
 end DataPath;
 architecture struct of DataPath is
@@ -73,6 +78,10 @@ architecture struct of DataPath is
  	port ( CLK: 		IN std_logic;
         RESET: 	IN std_logic;
 	 	ENABLE: 	IN std_logic;
+        BYTE             : in std_logic;
+        HALF_WORD :IN std_logic;
+        H_L       :IN std_logic;
+        S_U 	:IN std_logic;
 	 	RD1: 		IN std_logic;
 	 	RD2: 		IN std_logic;
 	 	WR: 		IN std_logic;
@@ -171,6 +180,7 @@ architecture struct of DataPath is
     signal jump_and_nothit: STD_LOGIC;
     signal write_address: STD_LOGIC_VECTOR(ADDR_WIDTH-1 downto 0);
     signal restore_pc: std_logic;
+    signal byte_skew: STD_LOGIC;
     begin
 
        --Instruction Fetch
@@ -328,6 +338,10 @@ architecture struct of DataPath is
             CLK => CLK,
             RESET => RST,
             ENABLE => RF_EN,
+            BYTE=>byte_skew,         
+            HALF_WORD=>HALF_WORD,
+            H_L =>H_L,           
+            S_U =>S_U, 		
             RD1 => RFR1_EN,
             RD2 => RFR2_EN,
             WR => RF_WE,
@@ -509,7 +523,7 @@ architecture struct of DataPath is
             Q => rd2
         );
         --MEMORY
-
+        byte_skew<=BYTE;
         DATA_TO_MEM<=me;
         MEM_ADDRESS<=alu_out_reg;
         mux_mem_alu: mux21

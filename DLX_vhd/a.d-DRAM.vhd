@@ -9,7 +9,8 @@ entity DRAM is
     );
     port (
         clk        : in  std_logic;                           
-        reset      : in  std_logic;                                
+        reset      : in  std_logic; 
+        BYTE             : in std_logic;                               
         we         : in  std_logic;                               
         addr       : in  std_logic_vector(ADDR_WIDTH-1 downto 0);    
         data_in : in  std_logic_vector(DATA_WIDTH-1 downto 0);       
@@ -29,7 +30,11 @@ begin
                 data_out <= (others => '0');
             else
                 if we = '1' then
-                    mem(to_integer(unsigned(addr))) <=data_in;
+                    if BYTE = '1' then
+                        mem(to_integer(unsigned(addr)))(7 downto 0) <= data_in(7 downto 0);
+                    else
+                        mem(to_integer(unsigned(addr))) <= data_in; 
+                    end if;
                 end if;
                 data_out <= mem(to_integer(unsigned(addr)));
             end if;
