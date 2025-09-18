@@ -211,6 +211,8 @@ architecture struct of alu is
             case op is
                 when NOP =>  
                     STANDARD_OUT <= (others => '0');
+                when B =>
+                    STANDARD_OUT <= INP2;
                 when A =>
                     STANDARD_OUT <= INP1;
                 when ALU_ADD | ALU_SUB => 

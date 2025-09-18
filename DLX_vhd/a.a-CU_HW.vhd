@@ -7,7 +7,7 @@ use work.myTypes.all;
 --use work.all;
 entity dlx_cu is
   generic (
-    MICROCODE_MEM_SIZE :     integer := 10;  -- Microcode Memory Size
+    MICROCODE_MEM_SIZE :     integer := 62;  -- Microcode Memory Size
     FUNC_SIZE          :     integer := 11;  -- Func Field Size for R-Type Ops
     OP_CODE_SIZE       :     integer := 6;  -- Op Code Size
     -- ALU_OPC_SIZE       :     integer := 6;  -- ALU Op Code Word Size
@@ -56,16 +56,69 @@ end dlx_cu;
 
 architecture dlx_cu_hw of dlx_cu is
   type mem_array is array (integer range 0 to MICROCODE_MEM_SIZE - 1) of std_logic_vector(CW_SIZE - 1 downto 0);
-  signal cw_mem : mem_array := ("111100010000111", -- R type: IS IT CORRECT?
+  signal cw_mem : mem_array := ("1100110111111000001010000", -- R type
                                 "000000000000000",
-                                "111011111001100", -- J (0X02) instruction encoding corresponds to the address to this ROM
-                                "000000000000000", -- JAL to be filled
-                                "000000000000000", -- BEQZ to be filled
-                                "000000000000000", -- BNEZ
+                                "1100001000000000110000000", -- J 
+                                "1100001000000000110011000", -- JAL 
+                                "1111101101000010100000000", -- BEQZ 
+                                "1111101101000000100000000", -- BNEZ
                                 "000000000000000", -- 
                                 "000000000000000",
-                                "000000000000000", -- ADD i (0X08): FILL IT!!!
-                                "000000000000000");-- to be completed (enlarged and filled)
+                                "1110101101101000001010000", -- ADD i (0X08): FILL IT!!!
+                                "1100101101101000001010000", -- ADDUI
+                                "1110101101101000001010000", -- SUBI
+                                "1100101101101000001010000", -- SUBUI
+                                "1100101101101000001010000", -- ANDI
+                                "1100101101101000001010000", -- ORI
+                                "1100101101101000001010000", -- XORI
+                                "1100001000100000001010110", -- LHI
+                                "000000000000000",
+                                "000000000000000",
+                                "1100100101001000100000000", --JR
+                                "1100100101001000100001000", --JALR
+                                "1110101101101000001010000", --SLLI
+                                "0000000000000000000000000", --NOP
+                                "1110101101101000001010000", --SRLI
+                                "1110101101101000001010000", --SRAI
+                                "1110101101101000001010000", --SEQI
+                                "1110101101101000001010000", --SNEI
+                                "1110101101101000001010000", --slti
+                                "1110101101101000001010000", --sgti
+                                "1110101101101000001010000", --slei
+                                "1110101101101000001010000", --sgei
+                                "000000000000000", 
+                                "000000000000000",
+                                "1100101101101001001110001", --lb
+                                "000000000000000",
+                                "1100101101101000001110000", --LW
+                                "1100101101101001001110000", --LBU
+                                "1100101101101000001110100", --LHU
+                                "000000000000000",
+                                "000000000000000",
+                                "000000000000000",
+                                "1100111111101101000000000", --SB
+                                "000000000000000",
+                                "1100111111101100000000000", --SW
+                                "000000000000000",
+                                "000000000000000",
+                                "000000000000000",
+                                "000000000000000",
+                                "000000000000000",
+                                "000000000000000",
+                                "000000000000000",
+                                "000000000000000",
+                                "000000000000000",
+                                "000000000000000",
+                                "000000000000000",
+                                "000000000000000",
+                                "000000000000000",
+                                "000000000000000",
+                                "000000000000000",
+                                "1100101101101000001010000", --SLTUI
+                                "1100101101101000001010000", --SGTUI
+                                "000000000000000",
+                                "1100101101101000001010000"  --SGEUI         
+                                );
                                 
                                 
   signal IR_opcode : std_logic_vector(OP_CODE_SIZE -1 downto 0);  -- OpCode part of IR
@@ -117,7 +170,7 @@ begin  -- dlx_cu_rtl
   PC_LATCH_EN  <= cw4(CW_SIZE - 13);
   
   -- stage five control signals
-  WB_MUX_SEL <= cw5(CW_SIZE - 14);
+  --WB_MUX_SEL <= cw5(CW_SIZE - 14);
   RF_WE      <= cw5(CW_SIZE - 15);
 
 
@@ -165,7 +218,7 @@ begin  -- dlx_cu_rtl
 			end case;
 		when 2 => aluOpcode_i <= NOP; -- j
 		when 3 => aluOpcode_i <= NOP; -- jal
-		when 8 => aluOpcode_i <= ADDS; -- addi
+		when 8 => aluOpcode_i <= ALU_ADD; -- addi
 		-- to be continued and filled with other cases
 		when others => aluOpcode_i <= NOP;
 	 end case;

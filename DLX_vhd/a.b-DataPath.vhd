@@ -26,7 +26,7 @@ entity DataPath is
         RegIMM_LATCH_EN    : in std_logic;  
 		RS1 					: in std_logic_vector(ADDR_WIDTH-1 downto 0);	--don't remember why i put them as input, probably can just take them from the instruction register
 		RS2 					: in std_logic_vector(ADDR_WIDTH-1 downto 0);	--
-		RD 						: in std_logic_vector(ADDR_WIDTH-1 downto 0);   --
+		RD 						: in std_logic_vector(ADDR_WIDTH-1 downto 0);   -- which 5 bits are rd changes depending on if i or r type
         RFR1_EN                     : in std_logic;
         RFR2_EN                     : in std_logic; 
         RF_EN                       :in std_logic;
