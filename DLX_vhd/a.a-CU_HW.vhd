@@ -12,58 +12,61 @@ entity dlx_cu is
     OP_CODE_SIZE       :     integer := 6;  -- Op Code Size
     -- ALU_OPC_SIZE       :     integer := 6;  -- ALU Op Code Word Size
     IR_SIZE            :     integer := 32;  -- Instruction Register Size    
-    CW_SIZE            :     integer := 15);  -- Control Word Size
+    CW_SIZE            :     integer := 25);  -- Control Word Size
   port (
     Clk                : in  std_logic;  -- Clock
     Rst                : in  std_logic;  -- Reset:Active-Low
-    -- Instruction Register
-    IR_IN              : in  std_logic_vector(IR_SIZE - 1 downto 0);
-    
-    -- IF Control Signal
-    IR_LATCH_EN        : out std_logic;  -- Instruction Register Latch Enable
-    NPC_LATCH_EN       : out std_logic;
-                                        -- NextProgramCounter Register Latch Enable
-    -- ID Control Signals
+    IR_IN              : in std_logic_vector(31 downto 0);
+    --IF
+    IR_LATCH_EN        : out std_logic;
+    PC_LATCH_EN        : out std_logic; 
+    FLUSH               : in std_logic;
+    --DE
+    sign_zero_ext      : out std_logic;
     I_J                : out std_logic;
-    RegA_LATCH_EN      : out std_logic;  -- Register A Latch Enable
-    RegB_LATCH_EN      : out std_logic;  -- Register B Latch Enable
-    RegIMM_LATCH_EN    : out std_logic;  -- Immediate Register Latch Enable
-    RFR1_EN            : out std_logic;  --register file read 1 enable
-    RFR2_EN            :out std_logic;  --register file read 1 enable
-    RF_EN              :out std_logic;  --register file enable
-
-
-    -- EX Control Signals
-    MUXA_SEL           : out std_logic;  -- MUX-A Sel
-    MUXB_SEL           : out std_logic;  -- MUX-B Sel
-    ALU_OUTREG_EN      : out std_logic;  -- ALU Output Register Enable
+    RegA_LATCH_EN      : out std_logic;  
+    RegB_LATCH_EN      : out std_logic;  
+    RegIMM_LATCH_EN    : out std_logic;  
+    RS1 					     : out std_logic_vector(4 downto 0);	
+    RS2 					     : out std_logic_vector(4 downto 0);	
+    RD 						     : out std_logic_vector(4 downto 0);   
+    RFR1_EN                     : out std_logic;
+    RFR2_EN                     : out std_logic; 
+    RF_EN                       : out std_logic;
+    --EX
+            
+    ALU_OUTREG_EN      : out std_logic;  
+    MUX_B                      : out std_logic;  
+    MUX_A                     : out std_logic;  
+    op                      : out aluOp; 
     MEM_LATCH_EN      : out std_logic;
-    EQ_COND            : out std_logic;  -- Branch if (not) Equal to Zero
-    -- ALU Operation Code
-    ALU_OPCODE         : out aluOp; -- choose between implicit or exlicit coding, like std_logic_vector(ALU_OPC_SIZE -1 downto 0);
-    
-    -- MEM Control Signals
-    DRAM_WE            : out std_logic;  -- Data RAM Write Enable
-    LMD_LATCH_EN       : out std_logic;  -- LMD Register Latch Enable
-    JUMP_EN            : out std_logic;  -- JUMP Enable Signal for PC input MUX
-    PC_LATCH_EN        : out std_logic;  -- Program Counte Latch Enable
-
-    -- WB Control signals
-    SEL_MEM_ALU         : out std_logic;  -- Write Back MUX Sel
-    RF_WE              : out std_logic);  -- Register File Write Enable
+    EQ_COND            : out std_logic;
+    --MEM
+    BYTE             : out std_logic;
+    JUMP_EN        : out std_logic;          --true for both jump and branch
+    JUMP            : out std_logic;         --true only for jump
+    LMD_LATCH_EN       : out std_logic;
+    SEL_MEM_ALU                      : out std_logic;  
+    --WB
+    RF_WE                     : out std_logic;
+    JAL:            out std_logic;
+    HALF_WORD        : out std_logic;
+    H_L             : out std_logic; --higher or lower part of the register
+    S_U 			    : out std_logic  --signed or unsigned write back
+    );  
 
 end dlx_cu;
 
 architecture dlx_cu_hw of dlx_cu is
   type mem_array is array (integer range 0 to MICROCODE_MEM_SIZE - 1) of std_logic_vector(CW_SIZE - 1 downto 0);
   signal cw_mem : mem_array := ("1100110111111000001010000", -- R type
-                                "000000000000000",
+                                "0000000000000000000000000",
                                 "1100001000000000110000000", -- J 
                                 "1100001000000000110011000", -- JAL 
                                 "1111101101000010100000000", -- BEQZ 
                                 "1111101101000000100000000", -- BNEZ
-                                "000000000000000", -- 
-                                "000000000000000",
+                                "0000000000000000000000000", -- 
+                                "0000000000000000000000000",
                                 "1110101101101000001010000", -- ADD i (0X08): FILL IT!!!
                                 "1100101101101000001010000", -- ADDUI
                                 "1110101101101000001010000", -- SUBI
@@ -72,8 +75,8 @@ architecture dlx_cu_hw of dlx_cu is
                                 "1100101101101000001010000", -- ORI
                                 "1100101101101000001010000", -- XORI
                                 "1100001000100000001010110", -- LHI
-                                "000000000000000",
-                                "000000000000000",
+                                "0000000000000000000000000",
+                                "0000000000000000000000000",
                                 "1100100101001000100000000", --JR
                                 "1100100101001000100001000", --JALR
                                 "1110101101101000001010000", --SLLI
@@ -86,37 +89,37 @@ architecture dlx_cu_hw of dlx_cu is
                                 "1110101101101000001010000", --sgti
                                 "1110101101101000001010000", --slei
                                 "1110101101101000001010000", --sgei
-                                "000000000000000", 
-                                "000000000000000",
+                                "0000000000000000000000000", 
+                                "0000000000000000000000000",
                                 "1100101101101001001110001", --lb
-                                "000000000000000",
+                                "0000000000000000000000000",
                                 "1100101101101000001110000", --LW
                                 "1100101101101001001110000", --LBU
                                 "1100101101101000001110100", --LHU
-                                "000000000000000",
-                                "000000000000000",
-                                "000000000000000",
+                                "0000000000000000000000000",
+                                "0000000000000000000000000",
+                                "0000000000000000000000000",
                                 "1100111111101101000000000", --SB
-                                "000000000000000",
+                                "0000000000000000000000000",
                                 "1100111111101100000000000", --SW
-                                "000000000000000",
-                                "000000000000000",
-                                "000000000000000",
-                                "000000000000000",
-                                "000000000000000",
-                                "000000000000000",
-                                "000000000000000",
-                                "000000000000000",
-                                "000000000000000",
-                                "000000000000000",
-                                "000000000000000",
-                                "000000000000000",
-                                "000000000000000",
-                                "000000000000000",
-                                "000000000000000",
+                                "0000000000000000000000000",
+                                "0000000000000000000000000",
+                                "0000000000000000000000000",
+                                "0000000000000000000000000",
+                                "0000000000000000000000000",
+                                "0000000000000000000000000",
+                                "0000000000000000000000000",
+                                "0000000000000000000000000",
+                                "0000000000000000000000000",
+                                "0000000000000000000000000",
+                                "0000000000000000000000000",
+                                "0000000000000000000000000",
+                                "0000000000000000000000000",
+                                "0000000000000000000000000",
+                                "0000000000000000000000000",
                                 "1100101101101000001010000", --SLTUI
                                 "1100101101101000001010000", --SGTUI
-                                "000000000000000",
+                                "0000000000000000000000000",
                                 "1100101101101000001010000"  --SGEUI         
                                 );
                                 
@@ -147,32 +150,36 @@ begin  -- dlx_cu_rtl
 
   cw <= cw_mem(conv_integer(IR_opcode));
 
-
-  -- stage one control signals
-  IR_LATCH_EN  <= cw1(CW_SIZE - 1);
-  NPC_LATCH_EN <= cw1(CW_SIZE - 2);
-  
-  -- stage two control signals
-  RegA_LATCH_EN   <= cw2(CW_SIZE - 3);
-  RegB_LATCH_EN   <= cw2(CW_SIZE - 4);
-  RegIMM_LATCH_EN <= cw2(CW_SIZE - 5);
-  
-  -- stage three control signals
-  MUXA_SEL      <= cw3(CW_SIZE - 6);
-  MUXB_SEL      <= cw3(CW_SIZE - 7);
-  ALU_OUTREG_EN <= cw3(CW_SIZE - 8);
-  EQ_COND       <= cw3(CW_SIZE - 9);
-  
-  -- stage four control signals
-  DRAM_WE      <= cw4(CW_SIZE - 10);
-  LMD_LATCH_EN <= cw4(CW_SIZE - 11);
-  JUMP_EN      <= cw4(CW_SIZE - 12);
-  PC_LATCH_EN  <= cw4(CW_SIZE - 13);
-  
-  -- stage five control signals
-  --WB_MUX_SEL <= cw5(CW_SIZE - 14);
-  RF_WE      <= cw5(CW_SIZE - 15);
-
+  IR_LATCH_EN   <=cw1(CW_SIZE - 1);
+  PC_LATCH_EN   <=cw1(CW_SIZE - 2);
+  --DE 
+  sign_zero_ext <=cw2(CW_SIZE - 3);
+  I_J           <=cw2(CW_SIZE - 4);
+  RegA_LATCH_EN <=cw2(CW_SIZE - 5);
+  RegB_LATCH_EN <=cw2(CW_SIZE - 6);
+  RegIMM_LATCH_EN<=cw2(CW_SIZE - 7);
+  RFR1_EN       <=cw2(CW_SIZE - 8);
+  RFR2_EN       <=cw2(CW_SIZE - 9);
+  RF_EN         <=cw2(CW_SIZE - 10);
+  --EX 
+ 
+  ALU_OUTREG_EN <=cw3(CW_SIZE - 11);
+  MUX_B         <=cw3(CW_SIZE - 12);
+  MUX_A         <=cw3(CW_SIZE - 13);
+  MEM_LATCH_EN  <=cw3(CW_SIZE - 14);
+  EQ_COND       <=cw3(CW_SIZE - 15);
+  --MEM 
+  BYTE          <=cw4(CW_SIZE - 16);
+  JUMP_EN       <=cw4(CW_SIZE - 17);
+  JUMP          <=cw4(CW_SIZE - 18);
+  LMD_LATCH_EN  <=cw4(CW_SIZE - 19);
+  SEL_MEM_ALU   <=cw4(CW_SIZE - 20);
+  --WB 
+  RF_WE         <=cw5(CW_SIZE - 21);
+  JAL           <=cw5(CW_SIZE - 22);
+  HALF_WORD     <=cw5(CW_SIZE - 23);
+  H_L           <=cw5(CW_SIZE - 24);
+  S_U 			    <=cw5(CW_SIZE - 25);
 
   -- process to pipeline control words
   CW_PIPE: process (Clk, Rst)
@@ -199,7 +206,7 @@ begin  -- dlx_cu_rtl
     end if;
   end process CW_PIPE;
 
-  ALU_OPCODE <= aluOpcode3;
+  op <= aluOpcode3;
 
   -- purpose: Generation of ALU OpCode
   -- type   : combinational
@@ -213,16 +220,74 @@ begin  -- dlx_cu_rtl
 			case conv_integer(unsigned(IR_func)) is
 				when 4 => aluOpcode_i <= LLS; -- sll according to instruction set coding
 				when 6 => aluOpcode_i <= LRS; -- srl
-				-- to be continued and filled with all the other instructions  
+        when 7 => aluOpcode_i <= ARS; -- sra
+        when 32 => aluOpcode_i <= ALU_ADD; -- add
+        when 33 => aluOpcode_i <= ALU_ADD; -- addu
+        when 34 => aluOpcode_i <= ALU_SUB; -- sub
+        when 35 => aluOpcode_i <= ALU_SUB; -- subu
+        when 36 => aluOpcode_i <= ALU_AND; -- and
+        when 37 => aluOpcode_i <= ALU_OR; -- or
+        when 38 => aluOpcode_i <= ALU_XOR; -- xor
+        when 40 => aluOpcode_i <= SEQ; -- seq
+        when 41 => aluOpcode_i <= SNE; -- sne
+        when 42 => aluOpcode_i <= SLT; -- slt
+        when 43 => aluOpcode_i <= SGT; -- sgt
+        when 44 => aluOpcode_i <= SLE; -- sle
+        when 45 => aluOpcode_i <= SGE; -- sge
+        when 58 => aluOpcode_i <= SLTU; -- sltu
+        when 59 => aluOpcode_i <= SGTU; -- sgtu
+        when 60 => aluOpcode_i <= SLEU; -- sleu
+        when 61 => aluOpcode_i <= SGEU; -- sgeu
+        when 14 => aluOpcode_i <= MULT; -- mult
+        when 15 => aluOpcode_i <= DIV; -- div
 				when others => aluOpcode_i <= NOP;
 			end case;
-		when 2 => aluOpcode_i <= NOP; -- j
-		when 3 => aluOpcode_i <= NOP; -- jal
-		when 8 => aluOpcode_i <= ALU_ADD; -- addi
-		-- to be continued and filled with other cases
+		when 2 => aluOpcode_i <= ALU_ADD; -- j
+		when 3 => aluOpcode_i <= ALU_ADD; -- jal
+    when 4 => aluOpcode_i <= ALU_ADD; -- BEQZ 
+    when 5 => aluOpcode_i <= ALU_ADD; -- BNEZ
+    when 8 => aluOpcode_i <= ALU_ADD;-- ADD i 
+    when 9 => aluOpcode_i <= ALU_ADD;-- ADDUI
+    when 10 => aluOpcode_i <= ALU_SUB;-- SUBI
+    when 11 => aluOpcode_i <= ALU_SUB;-- SUBUI
+    when 12 => aluOpcode_i <= ALU_AND;-- ANDI
+    when 13 => aluOpcode_i <= ALU_OR;-- ORI
+    when 14 => aluOpcode_i <= ALU_XOR;-- XORI
+    when 15 => aluOpcode_i <= B;-- LHI
+    when 18 => aluOpcode_i <= A;--JR
+    when 19 => aluOpcode_i <= A;--JALR
+    when 20 => aluOpcode_i <= LLS;--SLLI
+    when 21 => aluOpcode_i <= NOP;--NOP
+    when 22 => aluOpcode_i <= LRS;--SRLI
+    when 23 => aluOpcode_i <= ARS;--SRAI
+    when 24 => aluOpcode_i <= SEQ;--SEQI
+    when 25 => aluOpcode_i <= SNE;--SNEI
+    when 26 => aluOpcode_i <= SLT;--slti
+    when 27 => aluOpcode_i <= SGT;--sgti
+    when 28 => aluOpcode_i <= SLE;--slei
+    when 29 => aluOpcode_i <= SGE;--sgei
+    when 32 => aluOpcode_i <= ALU_ADD;--lb
+    when 35 => aluOpcode_i <= ALU_ADD;--LW
+    when 36 => aluOpcode_i <= ALU_ADD;--LBU
+    when 37 => aluOpcode_i <= ALU_ADD;--LHU
+    when 40 => aluOpcode_i <= ALU_ADD;--SB
+    when 43 => aluOpcode_i <= ALU_ADD;--SW
+    when 58 => aluOpcode_i <= SLTU;--SLTUI
+    when 59 => aluOpcode_i <= SGTU;--SGTUI
+    when 61 => aluOpcode_i <= SGEU;--SGEUI
 		when others => aluOpcode_i <= NOP;
 	 end case;
 	end process ALU_OP_CODE_P;
 
+RS1<=IR_IN(25 downto 21);
+ASSIGN_RS2_AND_RD : process (IR_opcode)
+   begin  
+	case conv_integer(unsigned(IR_opcode)) is
+    when 0 => RS2<=IR_IN(20 downto 16);
+      RD <=IR_IN(15 downto 11);
+    when others => RD <=IR_IN(20 downto 16);
+    end case;
+  end process;
 
+  --TODO:implement flush
 end dlx_cu_hw;

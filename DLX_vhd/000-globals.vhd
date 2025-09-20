@@ -32,5 +32,7 @@ package myTypes is
 	constant SLTU    : aluOp := "11010"; -- 26  (unsigned <)
 	constant A       : aluOp := "11011"; -- 27  (pass A)
 	constant B       : aluOp := "11100"; -- 28  (pass B)
+	constant SLEU	 : aluOp := "11101"; -- 29  (unsigned <=)
+	constant DIV	 : aluOp := "11110"; -- 30
 end myTypes;
 

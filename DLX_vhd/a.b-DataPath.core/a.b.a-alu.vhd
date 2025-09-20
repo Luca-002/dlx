@@ -266,7 +266,12 @@ architecture struct of alu is
                     else
                         STANDARD_OUT <= (others => '0');
                     end if;
-
+                when SLEU =>
+                    if A_le_u = '1' then
+                        STANDARD_OUT <= (DATA_WIDTH-1 downto 1 => '0') & '1';
+                    else
+                        STANDARD_OUT <= (others => '0');
+                    end if;
                 when SGEU =>
                     if A_ge_u = '1' then
                         STANDARD_OUT <= (DATA_WIDTH-1 downto 1 => '0') & '1';
