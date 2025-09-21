@@ -289,5 +289,15 @@ ASSIGN_RS2_AND_RD : process (IR_opcode)
     end case;
   end process;
 
-  --TODO:implement flush
+flush_proc: process (FLUSH)
+  begin
+    if FLUSH='1' then
+      cw1 <= (others => '0');
+      cw2 <= (others => '0');
+      cw3 <= (others => '0');
+      aluOpcode1 <= NOP;
+      aluOpcode2 <= NOP;
+      aluOpcode3 <= NOP;
+      end if;
+  end process;
 end dlx_cu_hw;

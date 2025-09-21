@@ -1,7 +1,7 @@
 library IEEE;
 use IEEE.std_logic_1164.all;
-use IEEE.std_logic_unsigned.all;
-use WORK.all;
+use IEEE.numeric_std.all;
+ use WORK.all;
 
 entity register_file is
     generic (
@@ -38,20 +38,20 @@ begin
     begin
         if rising_edge(CLK) and ENABLE='1' then
             if RD1 = '1' then
-                if ADD_RD1 = 0 then
+                if to_integer(unsigned(ADD_RD1)) = 0 then
                     OUT1 <= (others => '0');
                 else
-                    OUT1 <= REGISTERS(conv_integer(ADD_RD1));
+                    OUT1 <= REGISTERS(to_integer(unsigned(ADD_RD1)));
                 end if;
             else
                 OUT1 <= (others => 'Z');
             end if;
 
             if RD2 = '1' then
-                if ADD_RD2 = 0 then
+                if to_integer(unsigned(ADD_RD2)) = 0 then
                     OUT2 <= (others => '0');
                 else
-                    OUT2 <= REGISTERS(conv_integer(ADD_RD2));
+                    OUT2 <= REGISTERS(to_integer(unsigned(ADD_RD2)));
                 end if;
             else
                 OUT2 <= (others => 'Z');
@@ -66,34 +66,34 @@ begin
             if RESET = '1' then
                 REGISTERS <= (others => (others => '0'));
             elsif ENABLE = '1' and WR = '1' then
-                if ADD_WR /= (ADDR_WIDTH - 1 downto 0 => '0') then
+                if to_integer(unsigned(ADD_WR)) /= 0 then
                     if HALF_WORD = '1' then
                         if H_L = '1' then
-                            REGISTERS(conv_integer(ADD_WR))(DATA_WIDTH-1 downto DATA_WIDTH-16) <= DATAIN(16-1 downto 0);
-							REGISTERS(conv_integer(ADD_WR))(DATA_WIDTH-17 downto 0) <= (others => '0');
+                            REGISTERS(to_integer(unsigned(ADD_WR)))(DATA_WIDTH-1 downto DATA_WIDTH-16) <= DATAIN(16-1 downto 0);
+							REGISTERS(to_integer(unsigned(ADD_WR)))(DATA_WIDTH-17 downto 0) <= (others => '0');
                         else
-							REGISTERS(conv_integer(ADD_WR))(15 downto 0) <= DATAIN(15 downto 0);
+							REGISTERS(to_integer(unsigned(ADD_WR)))(15 downto 0) <= DATAIN(15 downto 0);
                             if S_U = '1' then
-                                REGISTERS(conv_integer(ADD_WR))(DATA_WIDTH-1 downto 16) <= (others => DATAIN(15));
+                                REGISTERS(to_integer(unsigned(ADD_WR)))(DATA_WIDTH-1 downto 16) <= (others => DATAIN(15));
                             else
-                                REGISTERS(conv_integer(ADD_WR))(DATA_WIDTH-1 downto 16) <= (others => '0');
+                                REGISTERS(to_integer(unsigned(ADD_WR)))(DATA_WIDTH-1 downto 16) <= (others => '0');
                             end if;
                         end if;
                     elsif BYTE = '1' then
                         if H_L = '1' then
-                            REGISTERS(conv_integer(ADD_WR))(DATA_WIDTH-1 downto DATA_WIDTH-8) <= DATAIN(7 downto 0);
-                            REGISTERS(conv_integer(ADD_WR))(DATA_WIDTH-9 downto 0) <= (others => '0');
+                            REGISTERS(to_integer(unsigned(ADD_WR)))(DATA_WIDTH-1 downto DATA_WIDTH-8) <= DATAIN(7 downto 0);
+                            REGISTERS(to_integer(unsigned(ADD_WR)))(DATA_WIDTH-9 downto 0) <= (others => '0');
                         else
-                            REGISTERS(conv_integer(ADD_WR))(7 downto 0) <= DATAIN(7 downto 0);
+                            REGISTERS(to_integer(unsigned(ADD_WR)))(7 downto 0) <= DATAIN(7 downto 0);
                             if S_U = '1' then
-                                REGISTERS(conv_integer(ADD_WR))(DATA_WIDTH-1 downto 8) <= (others => DATAIN(7));
+                                REGISTERS(to_integer(unsigned(ADD_WR)))(DATA_WIDTH-1 downto 8) <= (others => DATAIN(7));
                             else
-                                REGISTERS(conv_integer(ADD_WR))(DATA_WIDTH-1 downto 8) <= (others => '0');
+                                REGISTERS(to_integer(unsigned(ADD_WR)))(DATA_WIDTH-1 downto 8) <= (others => '0');
                             end if;
                         end if;
 
                     else
-                        REGISTERS(conv_integer(ADD_WR)) <= DATAIN;
+                        REGISTERS(to_integer(unsigned(ADD_WR))) <= DATAIN;
                     end if;
                 end if;
             end if;

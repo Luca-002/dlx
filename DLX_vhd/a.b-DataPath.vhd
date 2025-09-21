@@ -49,7 +49,7 @@ entity DataPath is
         DATA_FROM_MEM           : in std_logic_vector(DATA_WIDTH-1 downto 0);
         
         DATA_TO_MEM                : out std_logic_vector(DATA_WIDTH-1 downto 0);
-        MEM_ADDRESS             : out std_logic_vector((ADDR_WIDTH**2)-1 downto 0);
+        MEM_ADDRESS             : out std_logic_vector(DATA_WIDTH-1 downto 0);
         --WB
         RF_WE                     : in std_logic;
         JAL:            in std_logic;
@@ -117,12 +117,16 @@ architecture struct of DataPath is
         DATA_WIDTH: integer:=32
     );
     port(
-        CLK:       in std_logic;
-        rst:       in std_logic;
+        CLK                     : in std_logic;
+        RST                     : in std_logic;
         INP1 					: in std_logic_vector(DATA_WIDTH-1 downto 0);		
-		INP2 					: in std_logic_vector(DATA_WIDTH-1 downto 0);
+		    INP2 					: in std_logic_vector(DATA_WIDTH-1 downto 0);
         op                    : in aluOp;
-        DATA_OUT                : out std_logic_vector(DATA_WIDTH-1 downto 0)
+        STANDARD_OUT                : out std_logic_vector(DATA_WIDTH-1 downto 0);
+        DIV_OUT                     : OUT STD_LOGIC_VECTOR(DATA_WIDTH-1 DOWNTO 0);
+        MUL_OUT                     : OUT STD_LOGIC_VECTOR(DATA_WIDTH-1 DOWNTO 0);
+        DONE_DIV                : out std_logic;
+        DONE_MUL                : out std_logic
     );
     end component;
         
@@ -163,7 +167,7 @@ architecture struct of DataPath is
     signal IMM_I_TYPE,IMM_J_TYPE,imm_i_zero_ext,imm_i_sign_ext,imm_i_ext, imm_j_ext,imm_to_be_stored: std_logic_vector(DATA_WIDTH-1 downto 0);
     signal pc, pc_next,pc_alu,pc_final,cur_instruction : std_logic_vector(DATA_WIDTH-1 downto 0);    
     signal pc_plus4 : std_logic_vector(DATA_WIDTH-1 downto 0);
-    signal rd1,rd2,rd3: STD_LOGIC_VECTOR(0 DOWNTO 0);
+    signal rd1,rd2,rd3: STD_LOGIC_VECTOR(4 DOWNTO 0);
     signal rf_out1, rf_out2: STD_LOGIC_VECTOR(DATA_WIDTH-1 downto 0);
     signal in1,A,B,im: STD_LOGIC_VECTOR(DATA_WIDTH-1 downto 0);
     signal eq,not_eq,branch_cond: STD_LOGIC_VECTOR(0 downto 0);    --they're vectors just in order to be able to use the generic mux
@@ -481,7 +485,7 @@ architecture struct of DataPath is
             INP1 => alu_in1,
             INP2 => alu_in2,
             op => op,            
-            DATA_OUT =>alu_out
+            STANDARD_OUT =>alu_out
         );
 
 
