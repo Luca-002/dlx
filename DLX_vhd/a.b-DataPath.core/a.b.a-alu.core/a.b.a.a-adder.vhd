@@ -2,7 +2,7 @@ library ieee;
 use ieee.std_logic_1164.all;
 use ieee.std_logic_unsigned.all;
 
-entity adder is  --TODO: test
+entity adder is  
 	generic (
 		NBIT :		integer := 32;
 		NBIT_PER_BLOCK: integer := 4);

@@ -39,11 +39,12 @@ entity DataPath is
         op                      : in aluOp; 
         MEM_LATCH_EN      : in std_logic;
         EQ_COND            : in std_logic;
+        JUMP_EN        : in std_logic;          --true for both jump and branch
+        JUMP            : in std_logic;         --true only for jump 
         --MEM
         BYTE             : in std_logic;
        
-        JUMP_EN        : in std_logic;          --true for both jump and branch
-        JUMP            : in std_logic;         --true only for jump            check if mem or ex
+                 
         LMD_LATCH_EN       : in std_logic;
         SEL_MEM_ALU                      : in std_logic;  
         DATA_FROM_MEM           : in std_logic_vector(DATA_WIDTH-1 downto 0);
@@ -162,7 +163,7 @@ architecture struct of DataPath is
 
     );
     end component;
-
+    signal ir1: std_logic_vector(31 downto 0);
     signal IMM_I_TYPE: std_logic_vector(15 downto 0);
     signal IMM_J_TYPE: std_logic_vector(25 downto 0);
     signal branch_taken: std_logic;
@@ -201,8 +202,19 @@ architecture struct of DataPath is
             EN => IR_LATCH_EN,
             Q => cur_instruction
         );
-        IMM_I_TYPE<=cur_instruction(31 downto 16);
-        IMM_J_TYPE<=cur_instruction(31 downto 6);
+        register_ir1:single_register
+         generic map(
+            N => DATA_WIDTH
+        )
+         port map(
+            D => cur_instruction,
+            CK => CLK,
+            RESET => RST,
+            EN => IR_LATCH_EN,
+            Q => ir1
+        );
+        IMM_I_TYPE<=ir1(15 downto 0);
+        IMM_J_TYPE<=ir1(25 downto 0);
         register_pc: single_register
             generic map(
                 N => DATA_WIDTH
@@ -241,7 +253,7 @@ architecture struct of DataPath is
                 N => DATA_WIDTH
                 )
             port map(
-              D     => pc1,
+              D     => pc2,
               CK    => CLK,
               RESET => RST,
               EN => '1',
@@ -280,7 +292,7 @@ architecture struct of DataPath is
             clk => clk,
             reset => rst,
             pc => pc,
-            pc_branch => pc2,           --now sure if it needs 1 or 2 clock cycles of delay, needs testing
+            pc_branch => pc3,         
             branch_taken => branch_taken,
             target_branch => jump_addr,
             update => JUMP_EN,
@@ -462,7 +474,7 @@ architecture struct of DataPath is
         )
          port map(
             A => A,
-            B => pc2,
+            B => pc3,
             SEL => MUX_A,
             Y => alu_in1
         );

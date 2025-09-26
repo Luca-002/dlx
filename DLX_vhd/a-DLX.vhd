@@ -209,40 +209,7 @@ architecture dlx_rtl of DLX is
 
   begin  -- DLX
 
-    -- connect program counter input to datapath PC output
-    PC_BUS <= PC_TO_IRAM_sig(PC_SIZE - 1 downto 0); 
 
-
-    -- purpose: Instruction Register Process
-    -- type   : sequential
-    -- inputs : Clk, Rst, IRam_DOut, IR_LATCH_EN_i
-    -- outputs: IR_IN_i
-    IR_P: process (Clk, Rst)
-    begin  -- process IR_P
-      if Rst = '1' then                 
-        IR <= (others => '0');
-      elsif Clk'event and Clk = '1' then  -- rising clock edge
-        if (IR_LATCH_EN_i = '1') then
-          IR <= IRam_DOut;
-        end if;
-      end if;
-    end process IR_P;
-
-
-    -- purpose: Program Counter Process
-    -- type   : sequential
-    -- inputs : Clk, Rst, PC_BUS
-    -- outputs: IRam_Addr
-    PC_P: process (Clk, Rst)
-    begin  -- process PC_P
-      if Rst = '1' then                 
-        PC <= (others => '0');
-      elsif Clk'event and Clk = '1' then  -- rising clock edge
-        if (PC_LATCH_EN_i = '1') then
-          PC <= PC_BUS;
-        end if;
-      end if;
-    end process PC_P;
 
     -- Instruction Ram Instantiation
     IRAM_I: IRAM
@@ -251,12 +218,6 @@ architecture dlx_rtl of DLX is
           Addr => PC_TO_IRAM_sig,
           Dout => IRam_DOut);
 
-
-  ----------------------------------------------------------------
-  -- Data Memory (DRAM) Instantiation
-  -- note: using lower bits of MEM_ADDRESS_sig to form DRAM address (addr[7 downto 0])
-  ----------------------------------------------------------------
-  -- slice MEM_ADDRESS_sig(7 downto 0) into DRAM_ADDR_sig
   DRAM_ADDR_sig <= MEM_ADDRESS_sig(15 downto 0);
 
   DRAM_I: DRAM
@@ -342,7 +303,7 @@ architecture dlx_rtl of DLX is
     port map (
       Clk   => Clk,
       Rst   => Rst,
-      IR_IN => IR,
+      IR_IN => IRam_DOut,
 
       -- IF
       IR_LATCH_EN   => IR_LATCH_EN_i,
