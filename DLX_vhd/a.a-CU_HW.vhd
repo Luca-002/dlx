@@ -184,7 +184,7 @@ begin  -- dlx_cu_rtl
   -- process to pipeline control words
   CW_PIPE: process (Clk, Rst)
   begin  -- process Clk
-    if Rst = '0' then                   -- asynchronous reset (active low)
+    if Rst = '1' then                  
       cw1 <= (others => '0');
       cw2 <= (others => '0');
       cw3 <= (others => '0');
@@ -194,15 +194,24 @@ begin  -- dlx_cu_rtl
       aluOpcode2 <= NOP;
       aluOpcode3 <= NOP;
     elsif Clk'event and Clk = '1' then  -- rising clock edge
-      cw1 <= cw;
-      cw2 <= cw1(CW_SIZE - 1 - 2 downto 0);
-      cw3 <= cw2(CW_SIZE - 1 - 5 downto 0);
-      cw4 <= cw3(CW_SIZE - 1 - 9 downto 0);
-      cw5 <= cw4(CW_SIZE -1 - 13 downto 0);
+      if FLUSH='1' then
+        cw1 <= (others => '0');
+        cw2 <= (others => '0');
+        cw3 <= (others => '0');
+        aluOpcode1 <= NOP;
+        aluOpcode2 <= NOP;
+        aluOpcode3 <= NOP;
+      else  
+        cw1 <= cw;
+        cw2 <= cw1(CW_SIZE - 1 - 2 downto 0);
+        cw3 <= cw2(CW_SIZE - 1 - 5 downto 0);
+        cw4 <= cw3(CW_SIZE - 1 - 9 downto 0);
+        cw5 <= cw4(CW_SIZE -1 - 13 downto 0);
 
-      aluOpcode1 <= aluOpcode_i;
-      aluOpcode2 <= aluOpcode1;
-      aluOpcode3 <= aluOpcode2;
+        aluOpcode1 <= aluOpcode_i;
+        aluOpcode2 <= aluOpcode1;
+        aluOpcode3 <= aluOpcode2;
+      end if;
     end if;
   end process CW_PIPE;
 
@@ -289,15 +298,4 @@ ASSIGN_RS2_AND_RD : process (IR_opcode)
     end case;
   end process;
 
-flush_proc: process (FLUSH)
-  begin
-    if FLUSH='1' then
-      cw1 <= (others => '0');
-      cw2 <= (others => '0');
-      cw3 <= (others => '0');
-      aluOpcode1 <= NOP;
-      aluOpcode2 <= NOP;
-      aluOpcode3 <= NOP;
-      end if;
-  end process;
 end dlx_cu_hw;

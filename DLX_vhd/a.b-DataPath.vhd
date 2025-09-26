@@ -43,7 +43,7 @@ entity DataPath is
         BYTE             : in std_logic;
        
         JUMP_EN        : in std_logic;          --true for both jump and branch
-        JUMP            : in std_logic;         --true only for jump
+        JUMP            : in std_logic;         --true only for jump            check if mem or ex
         LMD_LATCH_EN       : in std_logic;
         SEL_MEM_ALU                      : in std_logic;  
         DATA_FROM_MEM           : in std_logic_vector(DATA_WIDTH-1 downto 0);
@@ -104,7 +104,7 @@ architecture struct of DataPath is
         end component;
 
 
-    component MUX21 is
+    component MUX21_GENERIC is
         generic (NBIT: integer:= 32);
 	    Port (	A:	In	std_logic_vector(NBIT-1 downto 0);
 		B:	In	std_logic_vector(NBIT-1 downto 0);
@@ -163,8 +163,10 @@ architecture struct of DataPath is
     );
     end component;
 
-
-    signal IMM_I_TYPE,IMM_J_TYPE,imm_i_zero_ext,imm_i_sign_ext,imm_i_ext, imm_j_ext,imm_to_be_stored: std_logic_vector(DATA_WIDTH-1 downto 0);
+    signal IMM_I_TYPE: std_logic_vector(15 downto 0);
+    signal IMM_J_TYPE: std_logic_vector(25 downto 0);
+    signal branch_taken: std_logic;
+    signal imm_i_zero_ext,imm_i_sign_ext,imm_i_ext, imm_j_ext,imm_to_be_stored: std_logic_vector(DATA_WIDTH-1 downto 0);
     signal pc, pc_next,pc_alu,pc_final,cur_instruction : std_logic_vector(DATA_WIDTH-1 downto 0);    
     signal pc_plus4 : std_logic_vector(DATA_WIDTH-1 downto 0);
     signal rd1,rd2,rd3: STD_LOGIC_VECTOR(4 DOWNTO 0);
@@ -200,7 +202,7 @@ architecture struct of DataPath is
             Q => cur_instruction
         );
         IMM_I_TYPE<=cur_instruction(31 downto 16);
-        IMM_J_TYPE<=cur_instruction(31 downto 7);
+        IMM_J_TYPE<=cur_instruction(31 downto 6);
         register_pc: single_register
             generic map(
                 N => DATA_WIDTH
@@ -258,7 +260,7 @@ architecture struct of DataPath is
               S => pc_plus4
             );
         jump_and_nothit<=JUMP_EN and (not(hit2(0)));
-        mux_jumpaddr_pcbtbmuxout: mux21
+        mux_jumpaddr_pcbtbmuxout: MUX21_GENERIC
          generic map(
             NBIT => DATA_WIDTH
         )
@@ -279,13 +281,13 @@ architecture struct of DataPath is
             reset => rst,
             pc => pc,
             pc_branch => pc2,           --now sure if it needs 1 or 2 clock cycles of delay, needs testing
-            branch_taken => branch_cond_nor_jump,
+            branch_taken => branch_taken,
             target_branch => jump_addr,
             update => JUMP_EN,
             hit => btb_hit(0),
             target_pc => btb_target
         );
-        mux_btbtarget_pcplus4: MUX21
+        mux_btbtarget_pcplus4: MUX21_GENERIC
          generic map(
             NBIT => DATA_WIDTH
         )
@@ -317,9 +319,10 @@ architecture struct of DataPath is
               EN => '1',
               Q     => hit2
             );
-        FLUSH<=branch_cond_nor_jump xor hit2(0);
-        restore_pc<=hit2(0) and (not(branch_cond_nor_jump));
-         mux_pc2_pcnext: MUX21
+        branch_taken<=not branch_cond_nor_jump;
+        FLUSH<=branch_taken xor hit2(0);
+        restore_pc<=hit2(0) and (not(branch_taken));
+         mux_pc2_pcnext: MUX21_GENERIC
          generic map(
             NBIT => DATA_WIDTH
         )
@@ -381,7 +384,7 @@ architecture struct of DataPath is
             EN => RegB_LATCH_EN,
             Q => B
         );
-        mux_immisign_immizero: MUX21
+        mux_immisign_immizero: MUX21_GENERIC
         generic map(
             NBIT => DATA_WIDTH
         )
@@ -391,7 +394,7 @@ architecture struct of DataPath is
             SEL => sign_zero_ext,
             Y => imm_i_ext
         );
-        mux_immi_immj: mux21
+        mux_immi_immj: MUX21_GENERIC
          generic map(
             NBIT => DATA_WIDTH
         )
@@ -432,7 +435,7 @@ architecture struct of DataPath is
         not_eq<=not(eq);
 
         branch_cond_nor_jump<=branch_cond(0) nor JUMP;
-        mux_pc_plus4_aluout: MUX21
+        mux_pc_plus4_aluout: MUX21_GENERIC
          generic map(
             NBIT => DATA_WIDTH
         )
@@ -442,7 +445,7 @@ architecture struct of DataPath is
             SEL => branch_cond_nor_jump,
             Y => jump_addr
         );
-        mux_noteq_eq:mux21
+        mux_noteq_eq:MUX21_GENERIC
          generic map(
             NBIT => 1
         )
@@ -453,7 +456,7 @@ architecture struct of DataPath is
             Y => branch_cond
         );
         
-        mux_A_pc: mux21
+        mux_A_pc: MUX21_GENERIC
          generic map(
             NBIT => DATA_WIDTH
         )
@@ -463,7 +466,7 @@ architecture struct of DataPath is
             SEL => MUX_A,
             Y => alu_in1
         );
-        mux_B_imm: mux21
+        mux_B_imm: MUX21_GENERIC
          generic map(
             NBIT => DATA_WIDTH
         )
@@ -530,7 +533,7 @@ architecture struct of DataPath is
         byte_skew<=BYTE;
         DATA_TO_MEM<=me;
         MEM_ADDRESS<=alu_out_reg;
-        mux_mem_alu: mux21
+        mux_mem_alu: MUX21_GENERIC
          generic map(
             NBIT => DATA_WIDTH
         )
@@ -563,7 +566,7 @@ architecture struct of DataPath is
             Q => rd3
         );
         --WRITE BACK
-        MUX21_32_rd: MUX21
+        MUX21_32_rd: MUX21_GENERIC
          generic map(
             NBIT => ADDR_WIDTH
         )
@@ -573,7 +576,7 @@ architecture struct of DataPath is
             SEL => JAL,
             Y => write_address
         );
-        MUX21_pc3_wbreg: MUX21
+        MUX21_pc3_wbreg: MUX21_GENERIC
          generic map(
             NBIT => DATA_WIDTH
         )

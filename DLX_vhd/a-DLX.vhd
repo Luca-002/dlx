@@ -219,7 +219,7 @@ architecture dlx_rtl of DLX is
     -- outputs: IR_IN_i
     IR_P: process (Clk, Rst)
     begin  -- process IR_P
-      if Rst = '0' then                 -- asynchronous reset (active low)
+      if Rst = '1' then                 
         IR <= (others => '0');
       elsif Clk'event and Clk = '1' then  -- rising clock edge
         if (IR_LATCH_EN_i = '1') then
@@ -235,7 +235,7 @@ architecture dlx_rtl of DLX is
     -- outputs: IRam_Addr
     PC_P: process (Clk, Rst)
     begin  -- process PC_P
-      if Rst = '0' then                 -- asynchronous reset (active low)
+      if Rst = '1' then                 
         PC <= (others => '0');
       elsif Clk'event and Clk = '1' then  -- rising clock edge
         if (PC_LATCH_EN_i = '1') then
@@ -248,7 +248,7 @@ architecture dlx_rtl of DLX is
     IRAM_I: IRAM
       port map (
           Rst  => Rst,
-          Addr => PC,
+          Addr => PC_TO_IRAM_sig,
           Dout => IRam_DOut);
 
 
