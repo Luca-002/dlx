@@ -273,7 +273,7 @@ architecture struct of DataPath is
               Cin  => '0',
               S => pc_plus4
             );
-        jump_and_nothit<=JUMP_EN and (not(btb_hit(0)));
+        jump_and_nothit<=JUMP_EN and (not(hit3(0)));
         mux_jumpaddr_pcbtbmuxout: MUX21_GENERIC
          generic map(
             NBIT => DATA_WIDTH
