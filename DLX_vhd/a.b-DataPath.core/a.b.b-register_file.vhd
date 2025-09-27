@@ -34,32 +34,14 @@ architecture Behavioral of register_file is
     signal REGISTERS : REG_ARRAY := (others => (others => '0')); 
 
 begin 
-    process(CLK)
-    begin
-        if rising_edge(CLK) and ENABLE='1' then
-            if RD1 = '1' then
-                if to_integer(unsigned(ADD_RD1)) = 0 then
-                    OUT1 <= (others => '0');
-                else
-                    OUT1 <= REGISTERS(to_integer(unsigned(ADD_RD1)));
-                end if;
-            else
-                OUT1 <= (others => 'Z');
-            end if;
+    OUT1 <= (others => '0') when to_integer(unsigned(ADD_RD1)) = 0 else
+            REGISTERS(to_integer(unsigned(ADD_RD1))) when RD1 = '1' else
+            (others => 'Z');
 
-            if RD2 = '1' then
-                if to_integer(unsigned(ADD_RD2)) = 0 then
-                    OUT2 <= (others => '0');
-                else
-                    OUT2 <= REGISTERS(to_integer(unsigned(ADD_RD2)));
-                end if;
-            else
-                OUT2 <= (others => 'Z');
-            end if;
-        end if;
-    end process;
-
-
+    OUT2 <= (others => '0') when to_integer(unsigned(ADD_RD2)) = 0 else
+            REGISTERS(to_integer(unsigned(ADD_RD2))) when RD2 = '1' else
+            (others => 'Z');
+            
     process(CLK)
     begin
         if rising_edge(CLK) then

@@ -181,7 +181,7 @@ begin  -- dlx_cu_rtl
   HALF_WORD     <=cw5(CW_SIZE - 23);
   H_L           <=cw5(CW_SIZE - 24);
   S_U 			    <=cw5(CW_SIZE - 25);
-
+  
   -- process to pipeline control words
   CW_PIPE: process (Clk, Rst)
   begin  -- process Clk

@@ -21,17 +21,17 @@ entity BTB is
 end entity BTB;
 
 architecture rtl of BTB is
-  type pc_matrix  is array (0 to (BITS_INDEX**2)-1) of std_logic_vector(BITS_PC-1 downto 0);
+  type pc_matrix  is array (0 to (2**BITS_INDEX)-1) of std_logic_vector(BITS_PC-1 downto 0);
 
   signal start   : pc_matrix;
   signal target   : pc_matrix;
-  signal valid,taken : std_logic_vector((BITS_INDEX**2)-1 downto 0);
+  signal valid,taken : std_logic_vector((2**BITS_INDEX)-1 downto 0);
 
 
   signal cur_index,branch_index: std_logic_vector(BITS_INDEX-1 downto 0);
 begin
   cur_index<=pc(BITS_INDEX+1 downto 2);
-  process(pc, start, target, valid,taken)
+  process(clk,pc, start, target, valid,taken)
     variable mem_pc: std_logic_vector(BITS_PC-1 downto 0);
   begin
     mem_pc:=start(to_integer(unsigned(cur_index)));
@@ -48,7 +48,7 @@ begin
   begin
     if rising_edge(clk) then
       if reset = '1' then
-        for i in 0 to (BITS_INDEX**2)-1 loop
+        for i in 0 to (2**BITS_INDEX)-1 loop
           taken(i)<='0';
           valid(i) <= '0';
           target(i)<=(others => '0');
@@ -56,10 +56,10 @@ begin
         end loop;
       else
         if (update = '1' ) then
-            start(to_integer(unsigned(cur_index)))<=pc_branch;
-            target(to_integer(unsigned(cur_index)))<=target_branch;
-            valid(to_integer(unsigned(cur_index)))<='1';
-            taken(to_integer(unsigned(cur_index)))<=branch_taken;
+            start(to_integer(unsigned(branch_index)))<=pc_branch;
+            target(to_integer(unsigned(branch_index)))<=target_branch;
+            valid(to_integer(unsigned(branch_index)))<='1';
+            taken(to_integer(unsigned(branch_index)))<=branch_taken;
         end if;
       end if;
     end if;
