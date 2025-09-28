@@ -142,7 +142,7 @@ architecture dlx_cu_hw of dlx_cu is
   signal aluOpcode2: aluOp := NOP;
   signal aluOpcode3: aluOp := NOP;
 
-
+  signal  RS1_i,RS2_i,RS1_1,RS2_1: std_logic_vector(4 downto 0);
  
 begin  -- dlx_cu_rtl
 
@@ -181,12 +181,12 @@ begin  -- dlx_cu_rtl
   HALF_WORD     <=cw5(CW_SIZE - 23);
   H_L           <=cw5(CW_SIZE - 24);
   S_U 			    <=cw5(CW_SIZE - 25);
-  
+  cw1<=cw;
   -- process to pipeline control words
   CW_PIPE: process (Clk, Rst)
   begin  -- process Clk
     if Rst = '1' then                  
-      cw1 <= (others => '0');
+      --cw1 <= (others => '0');
       cw2 <= (others => '0');
       cw3 <= (others => '0');
       cw4 <= (others => '0');
@@ -194,29 +194,36 @@ begin  -- dlx_cu_rtl
       aluOpcode1 <= NOP;
       aluOpcode2 <= NOP;
       aluOpcode3 <= NOP;
+      RS1_1<= (others =>'0');
+      RS2_1<= (others =>'0');
     elsif Clk'event and Clk = '1' then  -- rising clock edge
       if FLUSH='1' then
-        cw1 <= "11"&(CW_SIZE -3  downto 0 => '0');
+        --cw1 <= "11"&(CW_SIZE -3  downto 0 => '0');
         cw2 <= (others => '0');
         cw3 <= (others => '0');
         aluOpcode1 <= NOP;
         aluOpcode2 <= NOP;
         aluOpcode3 <= NOP;
+        RS1_1<= (others =>'0');
+        RS2_1<= (others =>'0');
       else  
-        cw1 <= cw;
+        --cw1 <= cw;
         cw2 <= cw1(CW_SIZE - 1 - 2 downto 0);
         cw3 <= cw2(CW_SIZE - 1 - 5 downto 0);
         cw4 <= cw3(CW_SIZE - 1 - 9 downto 0);
         cw5 <= cw4(CW_SIZE -1 - 13 downto 0);
-
+        
         aluOpcode1 <= aluOpcode_i;
         aluOpcode2 <= aluOpcode1;
         aluOpcode3 <= aluOpcode2;
+
+        RS1_1<= RS1_i;
+        RS2_1<= RS2_i;
       end if;
     end if;
   end process CW_PIPE;
 
-  op <= aluOpcode3;
+  op <= aluOpcode2;
 
   -- purpose: Generation of ALU OpCode
   -- type   : combinational
@@ -288,12 +295,13 @@ begin  -- dlx_cu_rtl
 		when others => aluOpcode_i <= NOP;
 	 end case;
 	end process ALU_OP_CODE_P;
-
-RS1<=IR_IN(25 downto 21);
+RS1<=RS1_1;
+RS1_i<=IR_IN(25 downto 21);
+RS2<=RS2_1;
 ASSIGN_RS2_AND_RD : process (IR_opcode)
    begin  
 	case conv_integer(unsigned(IR_opcode)) is
-    when 0 => RS2<=IR_IN(20 downto 16);
+    when 0 => RS2_i<=IR_IN(20 downto 16);
       RD <=IR_IN(15 downto 11);
     when others => RD <=IR_IN(20 downto 16);
     end case;
