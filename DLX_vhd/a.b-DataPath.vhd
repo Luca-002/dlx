@@ -32,7 +32,7 @@ entity DataPath is
         RF_EN                       :in std_logic;
 
         --EX
-        
+        ALU_OUTREG_SELECT  : in std_logic_vector(1 downto 0); -- is selects if in the alu auterg it goes the combinatorial alu, the multiplier or the divider 
         ALU_OUTREG_EN      : in std_logic;  
         MUX_B                      : in std_logic;  
         MUX_A                     : in std_logic;  
@@ -154,7 +154,7 @@ architecture struct of DataPath is
     signal in1,A,B,im: STD_LOGIC_VECTOR(DATA_WIDTH-1 downto 0);
     signal eq,not_eq,branch_cond: STD_LOGIC_VECTOR(0 downto 0);    --they're vectors just in order to be able to use the generic mux
     signal alu_in1,alu_in2: STD_LOGIC_VECTOR(DATA_WIDTH-1 downto 0);
-    signal alu_out, alu_out_reg: STD_LOGIC_VECTOR(DATA_WIDTH-1 downto 0);
+    signal alu_out, mul_out, seq_out, div_out, alu_out_reg: STD_LOGIC_VECTOR(DATA_WIDTH-1 downto 0);
     signal jump_addr: STD_LOGIC_VECTOR(DATA_WIDTH-1 downto 0);
     signal me: STD_LOGIC_VECTOR(DATA_WIDTH-1 downto 0);
     signal data_wb, wb_reg, out_mux_pc_wbreg: STD_LOGIC_VECTOR(DATA_WIDTH-1 downto 0);   
@@ -421,7 +421,6 @@ architecture struct of DataPath is
          port map(
 
             A => pc_plus4,
-
             B => alu_out,
             SEL => branch_cond_nor_jump,
             Y => jump_addr
@@ -470,9 +469,38 @@ architecture struct of DataPath is
             INP1 => alu_in1,
             INP2 => alu_in2,
             op => op,            
-            DATA_OUT =>alu_out
+            STANDARD_OUT => std_out,
+            MUL_OUT => mul_out, 
+            DIV_OUT => div_out,
+            DONE_DIV=> done_d, 
+            DONE_MUL => done_m
         );
 
+        mux_alu_comb_seq: work.MUX21_GENERIC(behavioral)
+
+         generic map(
+            NBIT => DATA_WIDTH
+        )
+         port map(
+
+            A => std_out,
+            B => seq_out,
+            SEL => ALU_OUTREG_SELECT(1),
+            Y => alu_out
+        );
+
+        mux_alu_mul_div: work.MUX21_GENERIC(behavioral)
+
+         generic map(
+            NBIT => DATA_WIDTH
+        )
+         port map(
+
+            A => mul_out,
+            B => div_out,
+            SEL => ALU_OUTREG_SELECT(0),
+            Y => seq_out
+        );
 
         register_alu_out: single_register
          generic map(

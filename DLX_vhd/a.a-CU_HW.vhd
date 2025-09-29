@@ -19,7 +19,7 @@ entity dlx_cu is
     -- Instruction Register
     IR_IN              : in  std_logic_vector(IR_SIZE - 1 downto 0);
     DIVISION_ENDED     : in  std_logic;
-    
+    MULTIPLICATION_ENDED : in std_logic; 
     -- IF Control Signal
     IR_LATCH_EN        : out std_logic;  -- Instruction Register Latch Enable
     NPC_LATCH_EN       : out std_logic;
@@ -80,14 +80,17 @@ architecture dlx_cu_hw of dlx_cu is
   signal cw3 : std_logic_vector(CW_SIZE - 1 - 5 downto 0); -- third stage
   signal cw4 : std_logic_vector(CW_SIZE - 1 - 9 downto 0); -- fourth stage
   signal cw5 : std_logic_vector(CW_SIZE -1 - 13 downto 0); -- fifth stage
+  signal restore_cw : std_logic;
 
   signal aluOpcode_i: aluOp := NOP; -- ALUOP defined in package
   signal aluOpcode1: aluOp := NOP;
   signal aluOpcode2: aluOp := NOP;
   signal aluOpcode3: aluOp := NOP;
 
-  signal cw_backup : std_logic_vector(CW_SIZE -1 downto 0); -- first stage
-
+  signal cw1_backup : std_logic_vector(CW_SIZE -1 downto 0); -- first stage
+  signal cw2_backup : std_logic_vector(CW_SIZE - 1 - 2 downto 0); -- second stage
+  signal cw3_backup : std_logic_vector(CW_SIZE - 1 - 5 downto 0); -- third stage
+  signal div_rd : STD_LOGIC_VECTOR()
  
 begin  -- dlx_cu_rtl
 
@@ -136,22 +139,34 @@ begin  -- dlx_cu_rtl
       aluOpcode2 <= NOP;
       aluOpcode3 <= NOP;
     elsif Clk'event and Clk = '1' then  -- rising clock 
-      if aluOpCode3 = ALU_DIV and DIVISION_ENDED = 0 then  
-        cw_backup <= cw;
+      if DIVISION_ENDED = '1' then 
+        restore_cw <= '1'; 
+        cw1_backup <= cw1;
+        cw2_backup <= cw2; 
+        cw3_backup <= cw3;
         cw1 <= (others => '0');
         cw2 <= (others => '0');
-        cw3 <= (others => '0'); 
+        cw3 <= (others => '0');
 
-      elsif aluOpCode3 = ALU_DIV and DIVISION_ENDED = 1 then
-        cw1 <= cw_backup;
-        cw2 <= cw1(CW_SIZE - 1 - 2 downto 0);
-        cw3 <= cw2(CW_SIZE - 1 - 5 downto 0);
+      elsif MULTIPLICATION_ENDED = '1' then
+        restore_cw <= '1'; 
+        cw1_backup <= cw1;
+        cw2_backup <= cw2; 
+        cw3_backup <= cw3;
+        cw1 <= (others => '0');
+        cw2 <= (others => '0');
+        cw3 <= (others => '0');
+
+      elsif restore_cw = '1' then 
+        restore_cw <= '0'; 
+        cw1 <= cw1_backup;
+        cw2 <= cw2_backup;
+        cw3 <= cw3_backup;
 
       else 
         cw1 <= cw;
         cw2 <= cw1(CW_SIZE - 1 - 2 downto 0);
         cw3 <= cw2(CW_SIZE - 1 - 5 downto 0);
-
 
         aluOpcode1 <= aluOpcode_i;
         aluOpcode2 <= aluOpcode1;
