@@ -14,16 +14,14 @@ entity DataPath is
 		RST 					: in std_logic;	
         --IF
         IR_LATCH_EN        : in std_logic;
-        INSTRUCTION        : in std_logic_vector(DATA_WIDTH-1 downto 0);
         PC_LATCH_EN        : in std_logic; 
         PC_TO_IRAM               : out std_logic_vector(DATA_WIDTH-1 downto 0);
         FLUSH               : out std_logic;
         --DE
-        sign_zero_ext      : in std_logic;
-        I_J                : in std_logic;
         RegA_LATCH_EN      : in std_logic;  
         RegB_LATCH_EN      : in std_logic;  
         RegIMM_LATCH_EN    : in std_logic;  
+        imm_to_be_stored   : in STD_LOGIC_VECTOR(31 downto 0);
 		RS1 					: in std_logic_vector(ADDR_WIDTH-1 downto 0);	
 		RS2 					: in std_logic_vector(ADDR_WIDTH-1 downto 0);	
 		RD 						: in std_logic_vector(ADDR_WIDTH-1 downto 0);   
@@ -163,14 +161,10 @@ architecture struct of DataPath is
 
     );
     end component;
-    signal ir1: std_logic_vector(31 downto 0);
-    signal IMM_I_TYPE: std_logic_vector(15 downto 0);
-    signal IMM_J_TYPE: std_logic_vector(25 downto 0);
     signal branch_taken: std_logic;
-    signal imm_i_zero_ext,imm_i_sign_ext,imm_i_ext, imm_j_ext,imm_to_be_stored: std_logic_vector(DATA_WIDTH-1 downto 0);
-    signal pc, pc_next,pc_alu,pc_final,cur_instruction : std_logic_vector(DATA_WIDTH-1 downto 0);    
+    signal pc, pc_next,pc_alu,pc_final: std_logic_vector(DATA_WIDTH-1 downto 0);    
     signal pc_plus4 : std_logic_vector(DATA_WIDTH-1 downto 0);
-    signal rd1,rd2,rd3,rd4: STD_LOGIC_VECTOR(4 DOWNTO 0);
+    signal rd1,rd2,rd3: STD_LOGIC_VECTOR(4 DOWNTO 0);
     signal rf_out1, rf_out2: STD_LOGIC_VECTOR(DATA_WIDTH-1 downto 0);
     signal in1,A,B,im: STD_LOGIC_VECTOR(DATA_WIDTH-1 downto 0);
     signal eq,not_eq,branch_cond: STD_LOGIC_VECTOR(0 downto 0);    --they're vectors just in order to be able to use the generic mux
@@ -193,30 +187,7 @@ architecture struct of DataPath is
     begin
 
        --Instruction Fetch
-        register_ir:single_register
-         generic map(
-            N => DATA_WIDTH
-        )
-         port map(
-            D => INSTRUCTION,
-            CK => CLK,
-            RESET => RST,
-            EN => IR_LATCH_EN,
-            Q => cur_instruction
-        );
-        register_ir1:single_register
-         generic map(
-            N => DATA_WIDTH
-        )
-         port map(
-            D => cur_instruction,
-            CK => CLK,
-            RESET => RST,
-            EN => IR_LATCH_EN,
-            Q => ir1
-        );
-        IMM_I_TYPE<=cur_instruction(15 downto 0);
-        IMM_J_TYPE<=cur_instruction(25 downto 0);
+        
         register_pc: single_register
             generic map(
                 N => DATA_WIDTH
@@ -347,9 +318,6 @@ architecture struct of DataPath is
             Y => pc_final
         );
        --DECODE
-        imm_i_zero_ext<=(DATA_WIDTH-16-1 downto 0 =>'0')&IMM_I_TYPE;
-        imm_i_sign_ext<=(DATA_WIDTH-16-1 downto 0 =>IMM_I_TYPE(15))&IMM_I_TYPE;
-        imm_j_ext<=(DATA_WIDTH-26-1 downto 0 =>IMM_J_TYPE(25))&IMM_J_TYPE;
         registerFile: register_file
          generic map(
             DATA_WIDTH => DATA_WIDTH,
@@ -397,26 +365,6 @@ architecture struct of DataPath is
             RESET => RST,
             EN => RegB_LATCH_EN,
             Q => B
-        );
-        mux_immisign_immizero: MUX21_GENERIC
-        generic map(
-            NBIT => DATA_WIDTH
-        )
-         port map(
-            A => imm_i_sign_ext,
-            B => imm_i_zero_ext,
-            SEL => sign_zero_ext,
-            Y => imm_i_ext
-        );
-        mux_immi_immj: MUX21_GENERIC
-         generic map(
-            NBIT => DATA_WIDTH
-        )
-         port map(
-            A => imm_i_ext,
-            B => imm_j_ext,
-            SEL => I_J,
-            Y => imm_to_be_stored
         );
 
         register_imm: single_register
@@ -579,17 +527,6 @@ architecture struct of DataPath is
             EN => '1',
             Q => rd3
         );
-        register_rd4: single_register
-         generic map(
-            N => ADDR_WIDTH
-        )
-         port map(
-            D => rd3,
-            CK => CLK,
-            RESET => RST,
-            EN => '1',
-            Q => rd4
-        );
         --WRITE BACK
         MUX21_32_rd: MUX21_GENERIC
          generic map(
@@ -597,7 +534,7 @@ architecture struct of DataPath is
         )
          port map(
             A => "11111",
-            B => rd4,
+            B => rd3,
             SEL => JAL,
             Y => write_address
         );

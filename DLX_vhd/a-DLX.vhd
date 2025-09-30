@@ -60,16 +60,14 @@ architecture dlx_rtl of DLX is
  	    RST 					: in std_logic;	
        --IF
        IR_LATCH_EN        : in std_logic;
-       INSTRUCTION        : in std_logic_vector(DATA_WIDTH-1 downto 0);
        PC_LATCH_EN        : in std_logic; 
        PC_TO_IRAM               : out std_logic_vector(DATA_WIDTH-1 downto 0);
        FLUSH               : out std_logic;
        --DE
-       sign_zero_ext      : in std_logic;
-       I_J                : in std_logic;
        RegA_LATCH_EN      : in std_logic;  
        RegB_LATCH_EN      : in std_logic;  
        RegIMM_LATCH_EN    : in std_logic;  
+       imm_to_be_stored   : in STD_LOGIC_VECTOR(31 downto 0);
  	     RS1 					: in std_logic_vector(ADDR_WIDTH-1 downto 0);	
  	     RS2 					: in std_logic_vector(ADDR_WIDTH-1 downto 0);	
  	     RD 						: in std_logic_vector(ADDR_WIDTH-1 downto 0);   
@@ -110,7 +108,7 @@ architecture dlx_rtl of DLX is
     FUNC_SIZE          :     integer := 11;  -- Func Field Size for R-Type Ops
     OP_CODE_SIZE       :     integer := 6;  -- Op Code Size
     IR_SIZE            :     integer := 32;  -- Instruction Register Size    
-    CW_SIZE            :     integer := 25);  -- Control Word Size
+    CW_SIZE            :     integer := 23);  -- Control Word Size
   port (
     Clk                : in  std_logic;  -- Clock
     Rst                : in  std_logic;  -- Reset:Active-Low
@@ -120,11 +118,10 @@ architecture dlx_rtl of DLX is
     PC_LATCH_EN        : out std_logic; 
     FLUSH               : in std_logic;
     --DE
-    sign_zero_ext      : out std_logic;
-    I_J                : out std_logic;
     RegA_LATCH_EN      : out std_logic;  
     RegB_LATCH_EN      : out std_logic;  
-    RegIMM_LATCH_EN    : out std_logic;  
+    RegIMM_LATCH_EN    : out std_logic; 
+    IM                 : out std_logic_vector(31 downto 0); 
     RS1 					     : out std_logic_vector(4 downto 0);	
     RS2 					     : out std_logic_vector(4 downto 0);	
     RD 						     : out std_logic_vector(4 downto 0);   
@@ -154,18 +151,7 @@ architecture dlx_rtl of DLX is
     ); 
 
   end component;
-  
-  -- Instruction Register (IR) and Program Counter (PC) declaration
-  signal IR : std_logic_vector(IR_SIZE - 1 downto 0);
-  signal PC : std_logic_vector(PC_SIZE - 1 downto 0);
-
-  -- Instruction Ram Bus signals
   signal IRam_DOut : std_logic_vector(IR_SIZE - 1 downto 0);
-
-  -- Datapath Bus signals
-  signal PC_BUS : std_logic_vector(PC_SIZE -1 downto 0);
-
-
   signal IR_LATCH_EN_i : std_logic;
   signal NPC_LATCH_EN_i : std_logic;
   signal RegA_LATCH_EN_i : std_logic;
@@ -183,8 +169,6 @@ architecture dlx_rtl of DLX is
   signal PC_LATCH_EN_i : std_logic;
   signal WB_MUX_SEL_i : std_logic;
   signal RF_WE_i : std_logic;
-  signal sign_zero_ext_i : std_logic;
-  signal I_J_i : std_logic;
   signal RS1_i : std_logic_vector(4 downto 0);
   signal RS2_i : std_logic_vector(4 downto 0);
   signal RD_i  : std_logic_vector(4 downto 0);
@@ -199,7 +183,7 @@ architecture dlx_rtl of DLX is
   signal H_L_i : std_logic;
   signal S_U_i : std_logic;
 
-
+  signal IMM_i: std_logic_vector(31 downto 0);
   signal DATA_TO_MEM_sig  : std_logic_vector(31 downto 0);
   signal DATA_FROM_MEM_sig: std_logic_vector(31 downto 0);
   signal PC_TO_IRAM_sig : std_logic_vector(31 downto 0);
@@ -246,17 +230,15 @@ architecture dlx_rtl of DLX is
 
       -- IF
       IR_LATCH_EN     => IR_LATCH_EN_i,
-      INSTRUCTION     => IRam_DOut,
       PC_LATCH_EN     => PC_LATCH_EN_i,
       PC_TO_IRAM      => PC_TO_IRAM_sig,
       FLUSH           => FLUSH_sig,
 
       -- DE
-      sign_zero_ext   => sign_zero_ext_i,
-      I_J             => I_J_i,
       RegA_LATCH_EN   => RegA_LATCH_EN_i,
       RegB_LATCH_EN   => RegB_LATCH_EN_i,
       RegIMM_LATCH_EN => RegIMM_LATCH_EN_i,
+      imm_to_be_stored => IMM_i,
       RS1             => RS1_i,
       RS2             => RS2_i,
       RD              => RD_i,
@@ -298,7 +280,7 @@ architecture dlx_rtl of DLX is
       FUNC_SIZE => 11,
       OP_CODE_SIZE => 6,
       IR_SIZE => 32,
-      CW_SIZE => 25
+      CW_SIZE => 23
     )
     port map (
       Clk   => Clk,
@@ -311,11 +293,10 @@ architecture dlx_rtl of DLX is
       FLUSH         => FLUSH_sig, 
 
       -- DE
-      sign_zero_ext => sign_zero_ext_i,
-      I_J           => I_J_i,
       RegA_LATCH_EN => RegA_LATCH_EN_i,
       RegB_LATCH_EN => RegB_LATCH_EN_i,
       RegIMM_LATCH_EN => RegIMM_LATCH_EN_i,
+      IM => IMM_i,
       RS1           => RS1_i,
       RS2           => RS2_i,
       RD            => RD_i,

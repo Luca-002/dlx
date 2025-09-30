@@ -12,7 +12,7 @@ entity dlx_cu is
     OP_CODE_SIZE       :     integer := 6;  -- Op Code Size
     -- ALU_OPC_SIZE       :     integer := 6;  -- ALU Op Code Word Size
     IR_SIZE            :     integer := 32;  -- Instruction Register Size    
-    CW_SIZE            :     integer := 25);  -- Control Word Size
+    CW_SIZE            :     integer := 23);  -- Control Word Size
   port (
     Clk                : in  std_logic;  -- Clock
     Rst                : in  std_logic;  -- Reset:Active-Low
@@ -22,11 +22,10 @@ entity dlx_cu is
     PC_LATCH_EN        : out std_logic; 
     FLUSH               : in std_logic;
     --DE
-    sign_zero_ext      : out std_logic;
-    I_J                : out std_logic;
     RegA_LATCH_EN      : out std_logic;  
     RegB_LATCH_EN      : out std_logic;  
     RegIMM_LATCH_EN    : out std_logic;  
+    IM                 : out std_logic_vector(31 downto 0);
     RS1 					     : out std_logic_vector(4 downto 0);	
     RS2 					     : out std_logic_vector(4 downto 0);	
     RD 						     : out std_logic_vector(4 downto 0);   
@@ -60,72 +59,72 @@ end dlx_cu;
 
 architecture dlx_cu_hw of dlx_cu is
   type mem_array is array (integer range 0 to MICROCODE_MEM_SIZE - 1) of std_logic_vector(CW_SIZE - 1 downto 0);
-  signal cw_mem : mem_array := ("1100110111111000001010000", -- R type
-                                "0000000000000000000000000",
-                                "1100001000000001100000000", -- J 
-                                "1100001000000001100011000", -- JAL 
-                                "1111101101000011000000000", -- BEQZ 
-                                "1111101101000001000000000", -- BNEZ
-                                "0000000000000000000000000", -- 
-                                "0000000000000000000000000",
-                                "1111101101101000001010000", -- ADD i (0X08): FILL IT!!!
-                                "1101101101101000001010000", -- ADDUI
-                                "1111101101101000001010000", -- SUBI
-                                "1101101101101000001010000", -- SUBUI
-                                "1101101101101000001010000", -- ANDI
-                                "1101101101101000001010000", -- ORI
-                                "1101101101101000001010000", -- XORI
-                                "1101001000100000001010110", -- LHI
-                                "0000000000000000000000000",
-                                "0000000000000000000000000",
-                                "1100100101001001000000000", --JR
-                                "1100100101001001000001000", --JALR
-                                "1111101101101000001010000", --SLLI
-                                "1100000000000000000000000", --NOP
-                                "1111101101101000001010000", --SRLI
-                                "1111101101101000001010000", --SRAI
-                                "1111101101101000001010000", --SEQI
-                                "1111101101101000001010000", --SNEI
-                                "1111101101101000001010000", --slti
-                                "1111101101101000001010000", --sgti
-                                "1111101101101000001010000", --slei
-                                "1111101101101000001010000", --sgei
-                                "0000000000000000000000000", 
-                                "0000000000000000000000000",
-                                "1100101101101000011110001", --lb
-                                "0000000000000000000000000",
-                                "1100101101101000001110000", --LW
-                                "1100101101101000011110000", --LBU
-                                "1100101101101000001110100", --LHU
-                                "0000000000000000000000000",
-                                "0000000000000000000000000",
-                                "0000000000000000000000000",
-                                "1100111111101100010000000", --SB
-                                "0000000000000000000000000",
-                                "1100111111101100000000000", --SW
-                                "0000000000000000000000000",
-                                "0000000000000000000000000",
-                                "0000000000000000000000000",
-                                "0000000000000000000000000",
-                                "0000000000000000000000000",
-                                "0000000000000000000000000",
-                                "0000000000000000000000000",
-                                "0000000000000000000000000",
-                                "0000000000000000000000000",
-                                "0000000000000000000000000",
-                                "0000000000000000000000000",
-                                "0000000000000000000000000",
-                                "0000000000000000000000000",
-                                "0000000000000000000000000",
-                                "0000000000000000000000000",
-                                "1101101101101000001010000", --SLTUI
-                                "1101101101101000001010000", --SGTUI
-                                "0000000000000000000000000",
-                                "1101101101101000001010000"  --SGEUI         
+  signal cw_mem : mem_array := ("11110111111000001010000", -- R type
+                                "00000000000000000000000",
+                                "11001000000001100000000", -- J 
+                                "11001000000001100011000", -- JAL 
+                                "11101101000011000000000", -- BEQZ 
+                                "11101101000001000000000", -- BNEZ
+                                "00000000000000000000000", -- 
+                                "00000000000000000000000",
+                                "11101101101000001010000", -- ADD i (0X08): FILL IT!!!
+                                "11101101101000001010000", -- ADDUI
+                                "11101101101000001010000", -- SUBI
+                                "11101101101000001010000", -- SUBUI
+                                "11101101101000001010000", -- ANDI
+                                "11101101101000001010000", -- ORI
+                                "11101101101000001010000", -- XORI
+                                "11001000100000001010110", -- LHI
+                                "00000000000000000000000",
+                                "00000000000000000000000",
+                                "11100101001001000000000", --JR
+                                "11100101001001000001000", --JALR
+                                "11101101101000001010000", --SLLI
+                                "11000000000000000000000", --NOP
+                                "11101101101000001010000", --SRLI
+                                "11101101101000001010000", --SRAI
+                                "11101101101000001010000", --SEQI
+                                "11101101101000001010000", --SNEI
+                                "11101101101000001010000", --slti
+                                "11101101101000001010000", --sgti
+                                "11101101101000001010000", --slei
+                                "11101101101000001010000", --sgei
+                                "00000000000000000000000", 
+                                "00000000000000000000000",
+                                "11101101101000011110001", --lb
+                                "00000000000000000000000",
+                                "11101101101000001110000", --LW
+                                "11101101101000011110000", --LBU
+                                "11101101101000001110100", --LHU
+                                "00000000000000000000000",
+                                "00000000000000000000000",
+                                "00000000000000000000000",
+                                "11111111101100010000000", --SB
+                                "00000000000000000000000",
+                                "11111111101100000000000", --SW
+                                "00000000000000000000000",
+                                "00000000000000000000000",
+                                "00000000000000000000000",
+                                "00000000000000000000000",
+                                "00000000000000000000000",
+                                "00000000000000000000000",
+                                "00000000000000000000000",
+                                "00000000000000000000000",
+                                "00000000000000000000000",
+                                "00000000000000000000000",
+                                "00000000000000000000000",
+                                "00000000000000000000000",
+                                "00000000000000000000000",
+                                "00000000000000000000000",
+                                "00000000000000000000000",
+                                "11101101101000001010000", --SLTUI
+                                "11101101101000001010000", --SGTUI
+                                "00000000000000000000000",
+                                "11101101101000001010000"  --SGEUI         
                                 );
                                 
                                 
-  signal IR_opcode : std_logic_vector(OP_CODE_SIZE -1 downto 0);  -- OpCode part of IR
+  signal IR_opcode, IR_opcode1 : std_logic_vector(OP_CODE_SIZE -1 downto 0);  -- OpCode part of IR
   signal IR_func : std_logic_vector(FUNC_SIZE downto 0);   -- Func part of IR when Rtype
   signal cw   : std_logic_vector(CW_SIZE - 1 downto 0); -- full control word read from cw_mem
 
@@ -141,12 +140,12 @@ architecture dlx_cu_hw of dlx_cu is
   signal aluOpcode1: aluOp := NOP;
   signal aluOpcode2: aluOp := NOP;
   signal aluOpcode3: aluOp := NOP;
-
-  signal  RS1_i,RS2_i,RS1_1,RS2_1: std_logic_vector(4 downto 0);
+  signal IR_i,IR1: STD_LOGIC_VECTOR(31 downto 0);
  
 begin  -- dlx_cu_rtl
 
   IR_opcode(5 downto 0) <= IR_IN(31 downto 26);
+  IR_opcode1(5 downto 0) <= IR1(31 downto 26);
   IR_func(10 downto 0)  <= IR_IN(FUNC_SIZE - 1 downto 0);
 
   cw <= cw_mem(conv_integer(IR_opcode));
@@ -154,33 +153,31 @@ begin  -- dlx_cu_rtl
   IR_LATCH_EN   <=cw1(CW_SIZE - 1);
   PC_LATCH_EN   <=cw1(CW_SIZE - 2);
   --DE 
-  sign_zero_ext <=cw2(CW_SIZE - 3);
-  I_J           <=cw2(CW_SIZE - 4);
-  RegA_LATCH_EN <=cw2(CW_SIZE - 5);
-  RegB_LATCH_EN <=cw2(CW_SIZE - 6);
-  RegIMM_LATCH_EN<=cw2(CW_SIZE - 7);
-  RFR1_EN       <=cw2(CW_SIZE - 8);
-  RFR2_EN       <=cw2(CW_SIZE - 9);
-  RF_EN         <=cw2(CW_SIZE - 10);
+  RegA_LATCH_EN <=cw2(CW_SIZE - 3);
+  RegB_LATCH_EN <=cw2(CW_SIZE - 4);
+  RegIMM_LATCH_EN<=cw2(CW_SIZE - 5);
+  RFR1_EN       <=cw2(CW_SIZE - 6);
+  RFR2_EN       <=cw2(CW_SIZE - 7);
+  RF_EN         <=cw2(CW_SIZE - 8);
   --EX 
  
-  ALU_OUTREG_EN <=cw3(CW_SIZE - 11);
-  MUX_B         <=cw3(CW_SIZE - 12);
-  MUX_A         <=cw3(CW_SIZE - 13);
-  MEM_LATCH_EN  <=cw3(CW_SIZE - 14);
-  EQ_COND       <=cw3(CW_SIZE - 15);
-  JUMP_EN       <=cw3(CW_SIZE - 16);
-  JUMP          <=cw3(CW_SIZE - 17);
+  ALU_OUTREG_EN <=cw3(CW_SIZE - 9);
+  MUX_B         <=cw3(CW_SIZE - 10);
+  MUX_A         <=cw3(CW_SIZE - 11);
+  MEM_LATCH_EN  <=cw3(CW_SIZE - 12);
+  EQ_COND       <=cw3(CW_SIZE - 13);
+  JUMP_EN       <=cw3(CW_SIZE - 14);
+  JUMP          <=cw3(CW_SIZE - 15);
   --MEM 
-  BYTE          <=cw4(CW_SIZE - 18);
-  LMD_LATCH_EN  <=cw4(CW_SIZE - 19);
-  SEL_MEM_ALU   <=cw4(CW_SIZE - 20);
+  BYTE          <=cw4(CW_SIZE - 16);
+  LMD_LATCH_EN  <=cw4(CW_SIZE - 17);
+  SEL_MEM_ALU   <=cw4(CW_SIZE - 18);
   --WB 
-  RF_WE         <=cw5(CW_SIZE - 21);
-  JAL           <=cw5(CW_SIZE - 22);
-  HALF_WORD     <=cw5(CW_SIZE - 23);
-  H_L           <=cw5(CW_SIZE - 24);
-  S_U 			    <=cw5(CW_SIZE - 25);
+  RF_WE         <=cw5(CW_SIZE - 19);
+  JAL           <=cw5(CW_SIZE - 20);
+  HALF_WORD     <=cw5(CW_SIZE - 21);
+  H_L           <=cw5(CW_SIZE - 22);
+  S_U 			    <=cw5(CW_SIZE - 23);
   cw1<=cw;
   -- process to pipeline control words
   CW_PIPE: process (Clk, Rst)
@@ -194,8 +191,7 @@ begin  -- dlx_cu_rtl
       aluOpcode1 <= NOP;
       aluOpcode2 <= NOP;
       aluOpcode3 <= NOP;
-      RS1_1<= (others =>'0');
-      RS2_1<= (others =>'0');
+      IR1 <= (others => '0');
     elsif Clk'event and Clk = '1' then  -- rising clock edge
       if FLUSH='1' then
         --cw1 <= "11"&(CW_SIZE -3  downto 0 => '0');
@@ -204,8 +200,7 @@ begin  -- dlx_cu_rtl
         aluOpcode1 <= NOP;
         aluOpcode2 <= NOP;
         aluOpcode3 <= NOP;
-        RS1_1<= (others =>'0');
-        RS2_1<= (others =>'0');
+        IR1 <= (others => '0');
       else  
         --cw1 <= cw;
         cw2 <= cw1(CW_SIZE - 1 - 2 downto 0);
@@ -217,8 +212,7 @@ begin  -- dlx_cu_rtl
         aluOpcode2 <= aluOpcode1;
         aluOpcode3 <= aluOpcode2;
 
-        RS1_1<= RS1_i;
-        RS2_1<= RS2_i;
+        IR1<=IR_i;
       end if;
     end if;
   end process CW_PIPE;
@@ -295,15 +289,19 @@ begin  -- dlx_cu_rtl
 		when others => aluOpcode_i <= NOP;
 	 end case;
 	end process ALU_OP_CODE_P;
-RS1<=RS1_1;
-RS1_i<=IR_IN(25 downto 21);
-RS2<=RS2_1;
-ASSIGN_RS2_AND_RD : process (IR_opcode)
+  IR_i<=IR_IN;
+  RS1<=IR1(25 downto 21);
+  ASSIGN_RS2_RD_AND_IM : process (IR_opcode1)
    begin  
-	case conv_integer(unsigned(IR_opcode)) is
-    when 0 => RS2_i<=IR_IN(20 downto 16);
-      RD <=IR_IN(15 downto 11);
-    when others => RD <=IR_IN(20 downto 16);
+	case conv_integer(unsigned(IR_opcode1)) is
+    when 0 => RS2<=IR1(20 downto 16);
+      RD <=IR1(15 downto 11);
+    when others => RD <=IR1(20 downto 16);
+    end case;
+  case conv_integer(unsigned(IR_opcode)) is
+    when 2 | 3 => IM <=(32-26-1 downto 0 =>IR1(25))&IR1(25 downto 0);
+    when 12 | 13 | 14 |20 | 22 | 23 | 15 => IM <= (32-16-1 downto 0 =>'0')&IR1(15 downto 0);
+    when others => IM <= (32-16-1 downto 0 =>IR1(15))&IR1(15 downto 0);
     end case;
   end process;
 
