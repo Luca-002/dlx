@@ -28,74 +28,130 @@ architecture dlx_rtl of DLX is
   
   --Instruction Ram
   component IRAM
---     generic (
---       RAM_DEPTH : integer;
---       I_SIZE    : integer);
     port (
       Rst  : in  std_logic;
       Addr : in  std_logic_vector(PC_SIZE - 1 downto 0);
       Dout : out std_logic_vector(IR_SIZE - 1 downto 0));
   end component;
 
-  -- Data Ram (MISSING!You must include it in your final project!)
+  component DRAM is
+    generic (
+        ADDR_WIDTH : integer := 8;  
+        DATA_WIDTH : integer := 32 
+    );
+    port (
+        clk        : in  std_logic;                           
+        reset      : in  std_logic; 
+        BYTE             : in std_logic;                               
+        we         : in  std_logic;                               
+        addr       : in  std_logic_vector(ADDR_WIDTH-1 downto 0);    
+        data_in : in  std_logic_vector(DATA_WIDTH-1 downto 0);       
+        data_out  : out std_logic_vector(DATA_WIDTH-1 downto 0)      
+    );
+  end component;
 
-  -- Datapath (MISSING!You must include it in your final project!)
-  
+ component DataPath is   
+   generic(
+       DATA_WIDTH: integer:=32;
+       ADDR_WIDTH: integer:= 5
+   );
+   port(
+       CLK 					: in std_logic;
+ 	    RST 					: in std_logic;	
+       --IF
+       IR_LATCH_EN        : in std_logic;
+       PC_LATCH_EN        : in std_logic; 
+       PC_TO_IRAM               : out std_logic_vector(DATA_WIDTH-1 downto 0);
+       FLUSH               : out std_logic;
+       --DE
+       RegA_LATCH_EN      : in std_logic;  
+       RegB_LATCH_EN      : in std_logic;  
+       RegIMM_LATCH_EN    : in std_logic;  
+       imm_to_be_stored   : in STD_LOGIC_VECTOR(31 downto 0);
+ 	     RS1 					: in std_logic_vector(ADDR_WIDTH-1 downto 0);	
+ 	     RS2 					: in std_logic_vector(ADDR_WIDTH-1 downto 0);	
+ 	     RD 						: in std_logic_vector(ADDR_WIDTH-1 downto 0);   
+       RFR1_EN                     : in std_logic;
+       RFR2_EN                     : in std_logic; 
+       RF_EN                       :in std_logic;
+       --EX
+       
+       ALU_OUTREG_EN      : in std_logic;  
+       MUX_B                      : in std_logic;  
+       MUX_A                     : in std_logic;  
+       op                      : in aluOp; 
+       MEM_LATCH_EN      : in std_logic;
+       EQ_COND            : in std_logic;
+       --MEM
+       BYTE             : in std_logic;
+      
+       JUMP_EN        : in std_logic;          --true for both jump and branch
+       JUMP            : in std_logic;         --true only for jump
+       LMD_LATCH_EN       : in std_logic;
+       SEL_MEM_ALU                      : in std_logic;  
+       DATA_FROM_MEM           : in std_logic_vector(DATA_WIDTH-1 downto 0);
+       
+       DATA_TO_MEM                : out std_logic_vector(DATA_WIDTH-1 downto 0);
+       MEM_ADDRESS             : out std_logic_vector(DATA_WIDTH-1 downto 0);
+       --WB
+       RF_WE                     : in std_logic;
+       JAL:            in std_logic;
+       HALF_WORD        : in std_logic;
+       H_L             : in std_logic; --higher or lower part of the register
+ 	    S_U 			: in std_logic  --signed or unsigned write back
+       );
+ end component;
   -- Control Unit
   component dlx_cu
   generic (
-    MICROCODE_MEM_SIZE :     integer := 10;  -- Microcode Memory Size
+    MICROCODE_MEM_SIZE :     integer := 62;  -- Microcode Memory Size
     FUNC_SIZE          :     integer := 11;  -- Func Field Size for R-Type Ops
     OP_CODE_SIZE       :     integer := 6;  -- Op Code Size
-    --ALU_OPC_SIZE       :     integer := 6;  -- ALU Op Code Word Size
     IR_SIZE            :     integer := 32;  -- Instruction Register Size    
-    CW_SIZE            :     integer := 15);  -- Control Word Size
+    CW_SIZE            :     integer := 23);  -- Control Word Size
   port (
     Clk                : in  std_logic;  -- Clock
     Rst                : in  std_logic;  -- Reset:Active-Low
-    -- Instruction Register
-    IR_IN              : in  std_logic_vector(IR_SIZE - 1 downto 0);
-    -- IF Control Signal
-    IR_LATCH_EN        : out std_logic;  -- Instruction Register Latch Enable
-    NPC_LATCH_EN       : out std_logic;
-    -- ID Control Signals
-    RegA_LATCH_EN      : out std_logic;  -- Register A Latch Enable
-    RegB_LATCH_EN      : out std_logic;  -- Register B Latch Enable
-    RegIMM_LATCH_EN    : out std_logic;  -- Immediate Register Latch Enable
-    -- EX Control Signals
-    MUXA_SEL           : out std_logic;  -- MUX-A Sel
-    MUXB_SEL           : out std_logic;  -- MUX-B Sel
-    ALU_OUTREG_EN      : out std_logic;  -- ALU Output Register Enable
-    EQ_COND            : out std_logic;  -- Branch if (not) Equal to Zero
-    -- ALU Operation Code
-    ALU_OPCODE         : out aluOp; -- choose between implicit or exlicit coding, like std_logic_vector(ALU_OPC_SIZE -1 downto 0);
-    -- MEM Control Signals
-    DRAM_WE            : out std_logic;  -- Data RAM Write Enable
-    LMD_LATCH_EN       : out std_logic;  -- LMD Register Latch Enable
-    JUMP_EN            : out std_logic;  -- JUMP Enable Signal for PC input MUX
-    PC_LATCH_EN        : out std_logic;  -- Program Counte Latch Enable
-    -- WB Control signals
-    WB_MUX_SEL         : out std_logic;  -- Write Back MUX Sel
-    RF_WE              : out std_logic);  -- Register File Write Enable
+    IR_IN              : in std_logic_vector(31 downto 0);
+    --IF
+    IR_LATCH_EN        : out std_logic;
+    PC_LATCH_EN        : out std_logic; 
+    FLUSH               : in std_logic;
+    --DE
+    RegA_LATCH_EN      : out std_logic;  
+    RegB_LATCH_EN      : out std_logic;  
+    RegIMM_LATCH_EN    : out std_logic; 
+    IM                 : out std_logic_vector(31 downto 0); 
+    RS1 					     : out std_logic_vector(4 downto 0);	
+    RS2 					     : out std_logic_vector(4 downto 0);	
+    RD 						     : out std_logic_vector(4 downto 0);   
+    RFR1_EN                     : out std_logic;
+    RFR2_EN                     : out std_logic; 
+    RF_EN                       : out std_logic;
+    --EX
+            
+    ALU_OUTREG_EN      : out std_logic;  
+    MUX_B                      : out std_logic;  
+    MUX_A                     : out std_logic;  
+    op                      : out aluOp; 
+    MEM_LATCH_EN      : out std_logic;
+    EQ_COND            : out std_logic;
+    --MEM
+    BYTE             : out std_logic;
+    JUMP_EN        : out std_logic;          --true for both jump and branch
+    JUMP            : out std_logic;         --true only for jump
+    LMD_LATCH_EN       : out std_logic;
+    SEL_MEM_ALU                      : out std_logic;  
+    --WB
+    RF_WE                     : out std_logic;
+    JAL:            out std_logic;
+    HALF_WORD        : out std_logic;
+    H_L             : out std_logic; --higher or lower part of the register
+    S_U 			    : out std_logic  --signed or unsigned write back
+    ); 
 
   end component;
-
-
-  ----------------------------------------------------------------
-  -- Signals Declaration
-  ----------------------------------------------------------------
-  
-  -- Instruction Register (IR) and Program Counter (PC) declaration
-  signal IR : std_logic_vector(IR_SIZE - 1 downto 0);
-  signal PC : std_logic_vector(PC_SIZE - 1 downto 0);
-
-  -- Instruction Ram Bus signals
   signal IRam_DOut : std_logic_vector(IR_SIZE - 1 downto 0);
-
-  -- Datapath Bus signals
-  signal PC_BUS : std_logic_vector(PC_SIZE -1 downto 0);
-
-  -- Control Unit Bus signals
   signal IR_LATCH_EN_i : std_logic;
   signal NPC_LATCH_EN_i : std_logic;
   signal RegA_LATCH_EN_i : std_logic;
@@ -103,6 +159,7 @@ architecture dlx_rtl of DLX is
   signal RegIMM_LATCH_EN_i : std_logic;
   signal EQ_COND_i : std_logic;
   signal JUMP_EN_i : std_logic;
+  signal JUMP_i : std_logic;
   signal ALU_OPCODE_i : aluOp;
   signal MUXA_SEL_i : std_logic;
   signal MUXB_SEL_i : std_logic;
@@ -112,82 +169,163 @@ architecture dlx_rtl of DLX is
   signal PC_LATCH_EN_i : std_logic;
   signal WB_MUX_SEL_i : std_logic;
   signal RF_WE_i : std_logic;
+  signal RS1_i : std_logic_vector(4 downto 0);
+  signal RS2_i : std_logic_vector(4 downto 0);
+  signal RD_i  : std_logic_vector(4 downto 0);
+  signal RFR1_EN_i : std_logic;
+  signal RFR2_EN_i : std_logic;
+  signal RF_EN_i : std_logic;
+  signal BYTE_i : std_logic;
+  signal MEM_LATCH_EN_i : std_logic;
+  signal SEL_MEM_ALU_i : std_logic;
+  signal JAL_i : std_logic;
+  signal HALF_WORD_i : std_logic;
+  signal H_L_i : std_logic;
+  signal S_U_i : std_logic;
 
-
-  -- Data Ram Bus signals
-
+  signal IMM_i: std_logic_vector(31 downto 0);
+  signal DATA_TO_MEM_sig  : std_logic_vector(31 downto 0);
+  signal DATA_FROM_MEM_sig: std_logic_vector(31 downto 0);
+  signal PC_TO_IRAM_sig : std_logic_vector(31 downto 0);
+  signal FLUSH_sig : std_logic;
+  signal MEM_ADDRESS_sig : std_logic_vector(31 downto 0);
+  signal DRAM_ADDR_sig : std_logic_vector(15 downto 0);
 
   begin  -- DLX
 
-    -- This is the input to program counter: currently zero 
-    -- so no uptade of PC happens
-    -- TO BE REMOVED AS SOON AS THE DATAPATH IS INSERTED!!!!!
-    -- a proper connection must be made here if more than one
-    -- instruction must be executed
-    PC_BUS <= (others => '0'); 
 
-
-    -- purpose: Instruction Register Process
-    -- type   : sequential
-    -- inputs : Clk, Rst, IRam_DOut, IR_LATCH_EN_i
-    -- outputs: IR_IN_i
-    IR_P: process (Clk, Rst)
-    begin  -- process IR_P
-      if Rst = '0' then                 -- asynchronous reset (active low)
-        IR <= (others => '0');
-      elsif Clk'event and Clk = '1' then  -- rising clock edge
-        if (IR_LATCH_EN_i = '1') then
-          IR <= IRam_DOut;
-        end if;
-      end if;
-    end process IR_P;
-
-
-    -- purpose: Program Counter Process
-    -- type   : sequential
-    -- inputs : Clk, Rst, PC_BUS
-    -- outputs: IRam_Addr
-    PC_P: process (Clk, Rst)
-    begin  -- process PC_P
-      if Rst = '0' then                 -- asynchronous reset (active low)
-        PC <= (others => '0');
-      elsif Clk'event and Clk = '1' then  -- rising clock edge
-        if (PC_LATCH_EN_i = '1') then
-          PC <= PC_BUS;
-        end if;
-      end if;
-    end process PC_P;
-
-    -- Control Unit Instantiation
-    CU_I: dlx_cu
-      port map (
-          Clk             => Clk,
-          Rst             => Rst,
-          IR_IN           => IR,
-          IR_LATCH_EN     => IR_LATCH_EN_i,
-          NPC_LATCH_EN    => NPC_LATCH_EN_i,
-          RegA_LATCH_EN   => RegA_LATCH_EN_i,
-          RegB_LATCH_EN   => RegB_LATCH_EN_i,
-          RegIMM_LATCH_EN => RegIMM_LATCH_EN_i,
-          MUXA_SEL        => MUXA_SEL_i,
-          MUXB_SEL        => MUXB_SEL_i,
-          ALU_OUTREG_EN   => ALU_OUTREG_EN_i,
-          EQ_COND         => EQ_COND_i,
-          ALU_OPCODE      => ALU_OPCODE_i,
-          DRAM_WE         => DRAM_WE_i,
-          LMD_LATCH_EN    => LMD_LATCH_EN_i,
-          JUMP_EN         => JUMP_EN_i,
-          PC_LATCH_EN     => PC_LATCH_EN_i,
-          WB_MUX_SEL      => WB_MUX_SEL_i,
-          RF_WE           => RF_WE_i);
 
     -- Instruction Ram Instantiation
     IRAM_I: IRAM
       port map (
           Rst  => Rst,
-          Addr => PC,
+          Addr => PC_TO_IRAM_sig,
           Dout => IRam_DOut);
 
-    
+  DRAM_ADDR_sig <= MEM_ADDRESS_sig(15 downto 0);
+
+  DRAM_I: DRAM
+    generic map (
+      ADDR_WIDTH => 16,  --IMPORTANT: change for synthesis
+      DATA_WIDTH => 32
+    )
+    port map (
+      clk     => Clk,
+      reset   => Rst,
+      BYTE    => BYTE_i,
+      we      => DRAM_WE_i,
+      addr    => DRAM_ADDR_sig,
+      data_in => DATA_TO_MEM_sig,
+      data_out=> DATA_FROM_MEM_sig
+    );
+
+  DP_I: DataPath
+    generic map (
+      DATA_WIDTH => 32,
+      ADDR_WIDTH => 5 
+    )
+    port map (
+      CLK => Clk,
+      RST => Rst,
+
+      -- IF
+      IR_LATCH_EN     => IR_LATCH_EN_i,
+      PC_LATCH_EN     => PC_LATCH_EN_i,
+      PC_TO_IRAM      => PC_TO_IRAM_sig,
+      FLUSH           => FLUSH_sig,
+
+      -- DE
+      RegA_LATCH_EN   => RegA_LATCH_EN_i,
+      RegB_LATCH_EN   => RegB_LATCH_EN_i,
+      RegIMM_LATCH_EN => RegIMM_LATCH_EN_i,
+      imm_to_be_stored => IMM_i,
+      RS1             => RS1_i,
+      RS2             => RS2_i,
+      RD              => RD_i,
+      RFR1_EN         => RFR1_EN_i,
+      RFR2_EN         => RFR2_EN_i,
+      RF_EN           => RF_EN_i,
+
+      -- EX
+      ALU_OUTREG_EN   => ALU_OUTREG_EN_i,
+      MUX_B           => MUXB_SEL_i,
+      MUX_A           => MUXA_SEL_i,
+      op              => ALU_OPCODE_i,
+      MEM_LATCH_EN    => MEM_LATCH_EN_i,
+      EQ_COND         => EQ_COND_i,
+
+      -- MEM
+      BYTE            => BYTE_i,
+      JUMP_EN         => JUMP_EN_i,
+      JUMP            => JUMP_i,
+      LMD_LATCH_EN    => LMD_LATCH_EN_i,
+      SEL_MEM_ALU     => SEL_MEM_ALU_i,
+      DATA_FROM_MEM   => DATA_FROM_MEM_sig,
+
+      DATA_TO_MEM     => DATA_TO_MEM_sig,
+      MEM_ADDRESS     => MEM_ADDRESS_sig,
+
+      -- WB
+      RF_WE           => RF_WE_i,
+      JAL             => JAL_i,
+      HALF_WORD       => HALF_WORD_i,
+      H_L             => H_L_i,
+      S_U             => S_U_i
+    );
+
+
+  CU_I: dlx_cu
+    generic map (
+      MICROCODE_MEM_SIZE => 62,
+      FUNC_SIZE => 11,
+      OP_CODE_SIZE => 6,
+      IR_SIZE => 32,
+      CW_SIZE => 23
+    )
+    port map (
+      Clk   => Clk,
+      Rst   => Rst,
+      IR_IN => IRam_DOut,
+
+      -- IF
+      IR_LATCH_EN   => IR_LATCH_EN_i,
+      PC_LATCH_EN   => PC_LATCH_EN_i,
+      FLUSH         => FLUSH_sig, 
+
+      -- DE
+      RegA_LATCH_EN => RegA_LATCH_EN_i,
+      RegB_LATCH_EN => RegB_LATCH_EN_i,
+      RegIMM_LATCH_EN => RegIMM_LATCH_EN_i,
+      IM => IMM_i,
+      RS1           => RS1_i,
+      RS2           => RS2_i,
+      RD            => RD_i,
+      RFR1_EN       => RFR1_EN_i,
+      RFR2_EN       => RFR2_EN_i,
+      RF_EN         => RF_EN_i,
+
+      -- EX
+      ALU_OUTREG_EN => ALU_OUTREG_EN_i,
+      MUX_B         => MUXB_SEL_i,
+      MUX_A         => MUXA_SEL_i,
+      op            => ALU_OPCODE_i,
+      MEM_LATCH_EN  => MEM_LATCH_EN_i,
+      EQ_COND       => EQ_COND_i,
+
+      -- MEM
+      BYTE          => BYTE_i,
+      JUMP_EN       => JUMP_EN_i,
+      JUMP          => JUMP_i,
+      LMD_LATCH_EN  => LMD_LATCH_EN_i,
+      SEL_MEM_ALU   => SEL_MEM_ALU_i,
+
+      -- WB
+      RF_WE         => RF_WE_i,
+      JAL           => JAL_i,
+      HALF_WORD     => HALF_WORD_i,
+      H_L           => H_L_i,
+      S_U           => S_U_i
+    );
+
     
 end dlx_rtl;

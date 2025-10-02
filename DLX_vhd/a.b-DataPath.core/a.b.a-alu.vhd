@@ -1,6 +1,6 @@
 library ieee;
 use ieee.std_logic_1164.all;
-use ieee.std_logic_unsigned.all;
+--use ieee.std_logic_unsigned.all;
 use ieee.std_logic_arith.all;
 use work.myTypes.all;
 
@@ -229,6 +229,8 @@ architecture struct of alu is
             case op is
                 when NOP =>  
                     STANDARD_OUT <= (others => '0');
+                when B =>
+                    STANDARD_OUT <= INP2;
                 when A =>
                     STANDARD_OUT <= INP1;
                 when ALU_ADD | ALU_SUB => 
@@ -282,7 +284,12 @@ architecture struct of alu is
                     else
                         STANDARD_OUT <= (others => '0');
                     end if;
-
+                when SLEU =>
+                    if A_le_u = '1' then
+                        STANDARD_OUT <= (DATA_WIDTH-1 downto 1 => '0') & '1';
+                    else
+                        STANDARD_OUT <= (others => '0');
+                    end if;
                 when SGEU =>
                     if A_ge_u = '1' then
                         STANDARD_OUT <= (DATA_WIDTH-1 downto 1 => '0') & '1';
