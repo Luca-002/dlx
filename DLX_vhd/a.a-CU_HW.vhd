@@ -156,8 +156,8 @@ architecture dlx_cu_hw of dlx_cu is
 
   signal IR_i,IR1: STD_LOGIC_VECTOR(31 downto 0);
 
-  signal stall: std_logic;
-
+  signal stall_struct: std_logic;
+  signal stall_data: std_logic;
  
 begin  -- dlx_cu_rtl
 
@@ -221,6 +221,8 @@ begin  -- dlx_cu_rtl
 
       if FLUSH='1' then
         --cw1 <= "11"&(CW_SIZE -3  downto 0 => '0');
+        stall_data<='0';
+        stall_struct <= '0';
         cw2 <= (others => '0');
         cw3 <= (others => '0');
         aluOpcode1 <= NOP;
@@ -231,24 +233,28 @@ begin  -- dlx_cu_rtl
       elsif DIVISION_ENDED = '1' then 
         cw4 <= cw3(CW_SIZE - 1 - 9 downto 0); 
         cw5 <= cw4(CW_SIZE -1 - 13 downto 0);
-        stall <= '1';
+        stall_struct <= '1';
+        stall_data<='0';
         ALU_OUTREG_MUL_DIV<='1';
         ALU_OUTREG_COMB_SEQ<='1';
 
       elsif MULTIPLICATION_ENDED = '1' then
         cw4 <= cw3(CW_SIZE - 1 - 9 downto 0); 
         cw5 <= cw4(CW_SIZE -1 - 13 downto 0);
-        stall <= '1';
+        stall_struct <= '1';
+        stall_data<='0';
         ALU_OUTREG_MUL_DIV<='0';
         ALU_OUTREG_COMB_SEQ<='1';
 
       elsif (CAN_READ = '0') or (CAN_WRITE = '0') then
         cw4 <= cw3(CW_SIZE - 1 - 9 downto 0); 
         cw5 <= cw4(CW_SIZE -1 - 13 downto 0);
-        stall <= '1';
+        stall_struct <= '0';
+        stall_data <= '1';
 
       else
-        stall <= '0';
+        stall_data<='0';
+        stall_struct <= '0';
         cw2 <= cw1(CW_SIZE - 1 - 2 downto 0);
         cw3 <= cw2(CW_SIZE - 1 - 5 downto 0);
         cw4 <= cw3(CW_SIZE - 1 - 9 downto 0); 
