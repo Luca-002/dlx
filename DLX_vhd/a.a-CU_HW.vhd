@@ -156,6 +156,8 @@ architecture dlx_cu_hw of dlx_cu is
 
   signal IR_i,IR1: STD_LOGIC_VECTOR(31 downto 0);
 
+  signal stall: std_logic;
+
  
 begin  -- dlx_cu_rtl
 
@@ -227,46 +229,26 @@ begin  -- dlx_cu_rtl
         IR1 <= (others => '0');
 
       elsif DIVISION_ENDED = '1' then 
-        restore_cw <= '1';
         cw4 <= cw3(CW_SIZE - 1 - 9 downto 0); 
         cw5 <= cw4(CW_SIZE -1 - 13 downto 0);
-        cw1_backup <= cw;
-        cw2_backup <= cw1; 
-        cw3_backup <= cw2;
-        cw2 <= (others => '0'); --TODO fai gli stalli col flag (stall)
-        cw3 <= (others => '0');
+        stall <= '1';
         ALU_OUTREG_MUL_DIV<='1';
         ALU_OUTREG_COMB_SEQ<='1';
 
       elsif MULTIPLICATION_ENDED = '1' then
-        restore_cw <= '1'; 
         cw4 <= cw3(CW_SIZE - 1 - 9 downto 0); 
         cw5 <= cw4(CW_SIZE -1 - 13 downto 0);
-        cw1_backup <= cw;
-        cw2_backup <= cw1; 
-        cw3_backup <= cw2;
-        cw2 <= (others => '0');
-        cw3 <= (others => '0');
+        stall <= '1';
         ALU_OUTREG_MUL_DIV<='0';
         ALU_OUTREG_COMB_SEQ<='1';
 
       elsif (CAN_READ = '0') or (CAN_WRITE = '0') then
-        restore_cw <= '1'; 
         cw4 <= cw3(CW_SIZE - 1 - 9 downto 0); 
         cw5 <= cw4(CW_SIZE -1 - 13 downto 0);
-        cw1_backup <= cw;
-        cw2_backup <= cw1; 
-        cw3_backup <= cw2;
-        cw2 <= (others => '0');
-        cw3 <= (others => '0');
+        stall <= '1';
 
-      elsif restore_cw = '1' then 
-        restore_cw <= '0'; 
-        cw2 <= cw2_backup(CW_SIZE - 1 - 2 downto 0);
-        cw3 <= cw3_backup(CW_SIZE - 1 - 5 downto 0);
-        cw4 <= cw3(CW_SIZE - 1 - 9 downto 0); 
-        cw5 <= cw4(CW_SIZE -1 - 13 downto 0);
-      else 
+      else
+        stall <= '0';
         cw2 <= cw1(CW_SIZE - 1 - 2 downto 0);
         cw3 <= cw2(CW_SIZE - 1 - 5 downto 0);
         cw4 <= cw3(CW_SIZE - 1 - 9 downto 0); 
