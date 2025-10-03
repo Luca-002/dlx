@@ -1,9 +1,7 @@
 library ieee;
 use ieee.std_logic_1164.all;
-use ieee.std_logic_unsigned.all;
-use ieee.std_logic_arith.all;
+use ieee.numeric_std.all;
 use work.myTypes.all;
---use ieee.numeric_std.all;
 --use work.all;
 entity dlx_cu is
   generic (
@@ -115,7 +113,7 @@ architecture dlx_cu_hw of dlx_cu is
                                 "11111111101100000000000", --SW
                                 "00000000000000000000000",
                                 "00000000000000000000000",
-                                "0000000000000000000RD30000",
+                                "00000000000000000000000",
                                 "00000000000000000000000",
                                 "00000000000000000000000",
                                 "00000000000000000000000",
@@ -136,7 +134,7 @@ architecture dlx_cu_hw of dlx_cu is
                                 
                                 
   signal IR_opcode, IR_opcode1 : std_logic_vector(OP_CODE_SIZE -1 downto 0);  -- OpCode part of IR
-  signal IR_func : std_logic_vector(FUNC_SIZE downto 0);   -- Func part of IR when Rtype
+  signal IR_func : std_logic_vector(FUNC_SIZE-1 downto 0);   -- Func part of IR when Rtype
   signal cw   : std_logic_vector(CW_SIZE - 1 downto 0); -- full control word read from cw_mem
 
 
@@ -153,9 +151,8 @@ architecture dlx_cu_hw of dlx_cu is
   signal aluOpcode2: aluOp := NOP;
   signal aluOpcode3: aluOp := NOP;
   signal cw1_backup : std_logic_vector(CW_SIZE -1 downto 0); -- first stage
-  signal cw2_backup : std_logic_vector(CW_SIZE - 1 - 2 downto 0); -- second stage
-  signal cw3_backup : std_logic_vector(CW_SIZE - 1 - 5 downto 0); -- third stage
-  signal div_rd : STD_LOGIC_VECTOR()
+  signal cw2_backup : std_logic_vector(CW_SIZE - 1  downto 0); -- second stage
+  signal cw3_backup : std_logic_vector(CW_SIZE - 1 - 2 downto 0); -- third stage
 
   signal IR_i,IR1: STD_LOGIC_VECTOR(31 downto 0);
 
@@ -164,9 +161,9 @@ begin  -- dlx_cu_rtl
 
   IR_opcode(5 downto 0) <= IR_IN(31 downto 26);
   IR_opcode1(5 downto 0) <= IR1(31 downto 26);
-  IR_func(10 downto 0)  <= IR_IN(FUNC_SIZE - 1 downto 0);
+  IR_func(FUNC_SIZE-1 downto 0)  <= IR_IN(FUNC_SIZE - 1 downto 0);
 
-  cw <= cw_mem(conv_integer(IR_opcode));
+  cw <= cw_mem(to_integer(unsigned(IR_opcode)));
 
   IR_LATCH_EN   <=cw1(CW_SIZE - 1);
   PC_LATCH_EN   <=cw1(CW_SIZE - 2);
@@ -210,6 +207,14 @@ begin  -- dlx_cu_rtl
       aluOpcode2 <= NOP;
       aluOpcode3 <= NOP; 
       IR1 <= (others => '0');
+      START_DIV <= '0';
+      START_MUL <= '0';
+      restore_cw <='0';
+      ALU_OUTREG_COMB_SEQ <='0';
+      ALU_OUTREG_MUL_DIV <= '0';
+      cw1_backup<= (others =>'0');
+      cw2_backup<= (others =>'0');
+      cw3_backup<= (others =>'0');
     elsif Clk'event and Clk = '1' then  -- rising clock
 
       if FLUSH='1' then
@@ -228,7 +233,6 @@ begin  -- dlx_cu_rtl
         cw1_backup <= cw;
         cw2_backup <= cw1; 
         cw3_backup <= cw2;
-        cw1 <= (others => '0');  
         cw2 <= (others => '0'); --TODO fai gli stalli col flag (stall)
         cw3 <= (others => '0');
         ALU_OUTREG_MUL_DIV<='1';
@@ -241,32 +245,28 @@ begin  -- dlx_cu_rtl
         cw1_backup <= cw;
         cw2_backup <= cw1; 
         cw3_backup <= cw2;
-        cw1 <= (others => '0');
         cw2 <= (others => '0');
         cw3 <= (others => '0');
         ALU_OUTREG_MUL_DIV<='0';
         ALU_OUTREG_COMB_SEQ<='1';
 
-      elsif (not CAN_READ) or (not CAN_WRITE) = '1' then
+      elsif (CAN_READ = '0') or (CAN_WRITE = '0') then
         restore_cw <= '1'; 
         cw4 <= cw3(CW_SIZE - 1 - 9 downto 0); 
         cw5 <= cw4(CW_SIZE -1 - 13 downto 0);
         cw1_backup <= cw;
         cw2_backup <= cw1; 
         cw3_backup <= cw2;
-        cw1 <= (others => '0');
         cw2 <= (others => '0');
         cw3 <= (others => '0');
 
       elsif restore_cw = '1' then 
         restore_cw <= '0'; 
-        cw1 <= cw1_backup;
-        cw2 <= cw2_backup;
-        cw3 <= cw3_backup;
+        cw2 <= cw2_backup(CW_SIZE - 1 - 2 downto 0);
+        cw3 <= cw3_backup(CW_SIZE - 1 - 5 downto 0);
         cw4 <= cw3(CW_SIZE - 1 - 9 downto 0); 
         cw5 <= cw4(CW_SIZE -1 - 13 downto 0);
       else 
-        cw1 <= cw;
         cw2 <= cw1(CW_SIZE - 1 - 2 downto 0);
         cw3 <= cw2(CW_SIZE - 1 - 5 downto 0);
         cw4 <= cw3(CW_SIZE - 1 - 9 downto 0); 
@@ -274,10 +274,10 @@ begin  -- dlx_cu_rtl
         aluOpcode1 <= aluOpcode_i;
         aluOpcode2 <= aluOpcode1;
         aluOpcode3 <= aluOpcode2;
-        if aluOpcode2 = ALU_DIV then 
+        if aluOpcode2 = DIV then 
           START_DIV <= '1';
         end if;
-        if aluOpcode2 = ALU_MUL then 
+        if aluOpcode2 = MULT then 
           START_MUL <= '1';
         end if;
         IR1<=IR_i;
@@ -294,10 +294,10 @@ begin  -- dlx_cu_rtl
   -- outputs: aluOpcode
    ALU_OP_CODE_P : process (IR_opcode, IR_func)
    begin  -- process ALU_OP_CODE_P
-	case conv_integer(unsigned(IR_opcode)) is
+	case to_integer(unsigned(IR_opcode)) is
 	        -- case of R type requires analysis of FUNC
 		when 0 =>
-			case conv_integer(unsigned(IR_func)) is
+			case to_integer(unsigned(IR_func)) is
 				when 4 => aluOpcode_i <= LLS; -- sll according to instruction set coding
 				when 6 => aluOpcode_i <= LRS; -- srl
         when 7 => aluOpcode_i <= ARS; -- sra
@@ -362,12 +362,12 @@ begin  -- dlx_cu_rtl
   RS1<=IR1(25 downto 21);
   ASSIGN_RS2_RD_AND_IM : process (IR_opcode1)
    begin  
-	case conv_integer(unsigned(IR_opcode1)) is
+	case to_integer(unsigned(IR_opcode1)) is
     when 0 => RS2<=IR1(20 downto 16);
       RD <=IR1(15 downto 11);
     when others => RD <=IR1(20 downto 16);
     end case;
-  case conv_integer(unsigned(IR_opcode)) is
+  case to_integer(unsigned(IR_opcode)) is
     when 2 | 3 => IM <=(32-26-1 downto 0 =>IR1(25))&IR1(25 downto 0);
     when 12 | 13 | 14 |20 | 22 | 23 | 15 => IM <= (32-16-1 downto 0 =>'0')&IR1(15 downto 0);
     when others => IM <= (32-16-1 downto 0 =>IR1(15))&IR1(15 downto 0);

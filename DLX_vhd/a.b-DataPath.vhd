@@ -1,7 +1,6 @@
 library ieee;
 use ieee.std_logic_1164.all;
-use ieee.std_logic_unsigned.all;
-use ieee.std_logic_arith.all;
+use ieee.numeric_std.all;
 use work.myTypes.all;
 
 entity DataPath is   
@@ -67,14 +66,7 @@ entity DataPath is
 end DataPath;
 architecture struct of DataPath is
 
-    function not_equal(A, B : std_logic_vector) return std_logic is
-      begin
-          if A /= B then
-              return '1';
-          else
-              return '0';
-          end if;
-      end function;
+    
 
     function or_reduce(v: std_logic_vector) return std_logic is
 		variable res: std_logic := '0';
@@ -84,7 +76,14 @@ architecture struct of DataPath is
 		end loop;
 		return res;
 	  end function;
-
+    function not_equal(A, B : std_logic_vector) return std_logic is
+      begin
+          if A /= B or or_reduce(A)='0' or or_reduce(B)='0' then
+              return '1';
+          else
+              return '0';
+          end if;
+      end function;        
 
     component register_file is
         generic (
@@ -642,7 +641,7 @@ architecture struct of DataPath is
         mux_rd_comb_seq: MUX21_GENERIC
 
          generic map(
-            NBIT => DATA_WIDTH
+            NBIT => 5
         )
          port map(
 
@@ -655,14 +654,14 @@ architecture struct of DataPath is
         mux_rd_mul_div: MUX21_GENERIC
 
          generic map(
-            NBIT => DATA_WIDTH
+            NBIT => 5
         )
          port map(
 
             A => mul_rd,
             B => div_rd,
             SEL => ALU_OUTREG_MUL_DIV,
-            Y => seq_out
+            Y => seq_rd
         );
 
         register_rd3: single_register

@@ -110,19 +110,6 @@ architecture struct of alu is
     );
     end component;
 
-    component divider is
-        generic(NBIT: integer:=32);
-        port (
-            clk     : in  std_logic;
-            start   : in  std_logic;
-            dividend: in  std_logic_vector(NBIT-1 downto 0);
-            divisor : in std_logic_vector(NBIT-1 downto 0);
-            quotient: out std_logic_vector(NBIT-1 downto 0);
-            remainder: out std_logic_vector(NBIT-1 downto 0);
-            done    : out std_logic
-        );
-    end component;
-
 
         signal cin_adder, cout_adder: STD_LOGIC;
         signal adder_out: STD_LOGIC_VECTOR(DATA_WIDTH-1 downto 0);
@@ -324,6 +311,11 @@ begin
     if rst = '1' then
         multiplier_finished_tracker <= (others => '0');
         DONE_MUL <= '0';
+        STANDARD_OUT<= (others => '0'); 
+        DIV_OUT <= (others => '0');    
+        MUL_OUT <= (others => '0');    
+        DONE_DIV <= '0';   
+        DONE_MUL  <= '0';  
     elsif rising_edge(clk) then
         if op = MULT then
             multiplier_finished_tracker(0) <= '1';
