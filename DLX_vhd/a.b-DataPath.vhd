@@ -230,7 +230,7 @@ architecture struct of DataPath is
               D     => pc,
               CK    => CLK,
               RESET => RST,
-              EN => '1',
+              EN => PC_LATCH_EN,
               Q     => pc1
             );
         register_pc2: single_register
@@ -241,7 +241,7 @@ architecture struct of DataPath is
               D     => pc1,
               CK    => CLK,
               RESET => RST,
-              EN => '1',
+              EN => PC_LATCH_EN,
               Q     => pc2
             ); 
         register_pc3: single_register
@@ -252,7 +252,7 @@ architecture struct of DataPath is
               D     => pc2,
               CK    => CLK,
               RESET => RST,
-              EN => '1',
+              EN => PC_LATCH_EN,
               Q     => pc3
             );    
         PC_TO_IRAM<=pc;
@@ -317,7 +317,7 @@ architecture struct of DataPath is
               D     => btb_hit,
               CK    => CLK,
               RESET => RST,
-              EN => '1',
+              EN => PC_LATCH_EN,
               Q     => hit1
             );
         register_hit2: single_register
@@ -328,7 +328,7 @@ architecture struct of DataPath is
               D     => hit1,
               CK    => CLK,
               RESET => RST,
-              EN => '1',
+              EN => PC_LATCH_EN,
               Q     => hit2
             );
         branch_taken<=(not branch_cond_nor_jump) and JUMP_EN;
@@ -417,7 +417,7 @@ architecture struct of DataPath is
             D => RD,
             CK => ClK,
             RESET => rst,
-            EN => '1',
+            EN => PC_LATCH_EN,
             Q => rd1
         );
 
@@ -557,7 +557,7 @@ architecture struct of DataPath is
             D => rd1,
             CK => CLK,
             RESET => RST,
-            EN => '1',
+            EN => PC_LATCH_EN,
             Q => mul_stages_rd(0)
         );
         --MEMORY
@@ -608,7 +608,7 @@ architecture struct of DataPath is
               D     => mul_stages_rd(i),
               CK    => CLK,
               RESET => RST,
-              EN    => '1',  
+              EN    => PC_LATCH_EN,  
               Q     => mul_stages_rd(i+1)
             );
         end generate;
@@ -672,7 +672,7 @@ architecture struct of DataPath is
             D => rd2,
             CK => CLK,
             RESET => RST,
-            EN => '1',
+            EN => PC_LATCH_EN,
             Q => rd3
         );
         --WRITE BACK
