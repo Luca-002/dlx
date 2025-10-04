@@ -150,14 +150,8 @@ architecture dlx_cu_hw of dlx_cu is
   signal aluOpcode1: aluOp := NOP;
   signal aluOpcode2: aluOp := NOP;
   signal aluOpcode3: aluOp := NOP;
-  signal cw1_backup : std_logic_vector(CW_SIZE -1 downto 0); -- first stage
-  signal cw2_backup : std_logic_vector(CW_SIZE - 1  downto 0); -- second stage
-  signal cw3_backup : std_logic_vector(CW_SIZE - 1 - 2 downto 0); -- third stage
 
   signal IR_i,IR1: STD_LOGIC_VECTOR(31 downto 0);
-
-  signal stall_struct: std_logic;
-  signal stall_data: std_logic;
  
 begin  -- dlx_cu_rtl
 
@@ -167,24 +161,24 @@ begin  -- dlx_cu_rtl
 
   cw <= cw_mem(to_integer(unsigned(IR_opcode)));
 
-  IR_LATCH_EN   <=cw1(CW_SIZE - 1);
-  PC_LATCH_EN   <=cw1(CW_SIZE - 2);
+  IR_LATCH_EN   <=cw1(CW_SIZE - 1) and not(not(CAN_READ) or not(CAN_WRITE) or MULTIPLICATION_ENDED or DIVISION_ENDED);
+  PC_LATCH_EN   <=cw1(CW_SIZE - 2) and not(not(CAN_READ) or not(CAN_WRITE) or MULTIPLICATION_ENDED or DIVISION_ENDED);
   --DE 
-  RegA_LATCH_EN <=cw2(CW_SIZE - 3);
-  RegB_LATCH_EN <=cw2(CW_SIZE - 4);
-  RegIMM_LATCH_EN<=cw2(CW_SIZE - 5);
-  RFR1_EN       <=cw2(CW_SIZE - 6);
-  RFR2_EN       <=cw2(CW_SIZE - 7);
-  RF_EN         <=cw2(CW_SIZE - 8);
+  RegA_LATCH_EN <=cw2(CW_SIZE - 3)  and not(not(CAN_READ) or not(CAN_WRITE) or MULTIPLICATION_ENDED or DIVISION_ENDED);
+  RegB_LATCH_EN <=cw2(CW_SIZE - 4)  and not(not(CAN_READ) or not(CAN_WRITE) or MULTIPLICATION_ENDED or DIVISION_ENDED);
+  RegIMM_LATCH_EN<=cw2(CW_SIZE - 5) and not(not(CAN_READ) or not(CAN_WRITE) or MULTIPLICATION_ENDED or DIVISION_ENDED);
+  RFR1_EN       <=cw2(CW_SIZE - 6)  and not(not(CAN_READ) or not(CAN_WRITE) or MULTIPLICATION_ENDED or DIVISION_ENDED);
+  RFR2_EN       <=cw2(CW_SIZE - 7)  and not(not(CAN_READ) or not(CAN_WRITE) or MULTIPLICATION_ENDED or DIVISION_ENDED);
+  RF_EN         <=cw2(CW_SIZE - 8)  and not(not(CAN_READ) or not(CAN_WRITE) or MULTIPLICATION_ENDED or DIVISION_ENDED);
   --EX 
  
-  ALU_OUTREG_EN <=cw3(CW_SIZE - 9);
-  MUX_B         <=cw3(CW_SIZE - 10);
-  MUX_A         <=cw3(CW_SIZE - 11);
-  MEM_LATCH_EN  <=cw3(CW_SIZE - 12);
-  EQ_COND       <=cw3(CW_SIZE - 13);
-  JUMP_EN       <=cw3(CW_SIZE - 14);
-  JUMP          <=cw3(CW_SIZE - 15);
+  ALU_OUTREG_EN <=cw3(CW_SIZE - 9) and not(MULTIPLICATION_ENDED or DIVISION_ENDED);
+  MUX_B         <=cw3(CW_SIZE - 10) and not(MULTIPLICATION_ENDED or DIVISION_ENDED);
+  MUX_A         <=cw3(CW_SIZE - 11) and not(MULTIPLICATION_ENDED or DIVISION_ENDED);
+  MEM_LATCH_EN  <=cw3(CW_SIZE - 12) and not(MULTIPLICATION_ENDED or DIVISION_ENDED);
+  EQ_COND       <=cw3(CW_SIZE - 13) and not(MULTIPLICATION_ENDED or DIVISION_ENDED);
+  JUMP_EN       <=cw3(CW_SIZE - 14) and not(MULTIPLICATION_ENDED or DIVISION_ENDED);
+  JUMP          <=cw3(CW_SIZE - 15) and not(MULTIPLICATION_ENDED or DIVISION_ENDED);
   --MEM 
   BYTE          <=cw4(CW_SIZE - 16);
   LMD_LATCH_EN  <=cw4(CW_SIZE - 17);
@@ -214,15 +208,10 @@ begin  -- dlx_cu_rtl
       restore_cw <='0';
       ALU_OUTREG_COMB_SEQ <='0';
       ALU_OUTREG_MUL_DIV <= '0';
-      cw1_backup<= (others =>'0');
-      cw2_backup<= (others =>'0');
-      cw3_backup<= (others =>'0');
     elsif Clk'event and Clk = '1' then  -- rising clock
 
       if FLUSH='1' then
         --cw1 <= "11"&(CW_SIZE -3  downto 0 => '0');
-        stall_data<='0';
-        stall_struct <= '0';
         cw2 <= (others => '0');
         cw3 <= (others => '0');
         aluOpcode1 <= NOP;
@@ -233,28 +222,20 @@ begin  -- dlx_cu_rtl
       elsif DIVISION_ENDED = '1' then 
         cw4 <= cw3(CW_SIZE - 1 - 9 downto 0); 
         cw5 <= cw4(CW_SIZE -1 - 13 downto 0);
-        stall_struct <= '1';
-        stall_data<='0';
         ALU_OUTREG_MUL_DIV<='1';
         ALU_OUTREG_COMB_SEQ<='1';
 
       elsif MULTIPLICATION_ENDED = '1' then
         cw4 <= cw3(CW_SIZE - 1 - 9 downto 0); 
         cw5 <= cw4(CW_SIZE -1 - 13 downto 0);
-        stall_struct <= '1';
-        stall_data<='0';
         ALU_OUTREG_MUL_DIV<='0';
         ALU_OUTREG_COMB_SEQ<='1';
 
       elsif (CAN_READ = '0') or (CAN_WRITE = '0') then
         cw4 <= cw3(CW_SIZE - 1 - 9 downto 0); 
         cw5 <= cw4(CW_SIZE -1 - 13 downto 0);
-        stall_struct <= '0';
-        stall_data <= '1';
 
       else
-        stall_data<='0';
-        stall_struct <= '0';
         cw2 <= cw1(CW_SIZE - 1 - 2 downto 0);
         cw3 <= cw2(CW_SIZE - 1 - 5 downto 0);
         cw4 <= cw3(CW_SIZE - 1 - 9 downto 0); 

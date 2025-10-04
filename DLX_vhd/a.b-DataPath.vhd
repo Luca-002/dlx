@@ -205,7 +205,8 @@ architecture struct of DataPath is
     type stage_array is array (0 to 8) of std_logic_vector(ADDR_WIDTH-1 downto 0);
     signal mul_stages_rd : stage_array; 
     signal std_rd, mul_rd, div_rd, seq_rd: STD_LOGIC_VECTOR(4 DOWNTO 0);
-
+    signal done_div_i, done_mul_i: std_logic;
+    signal ex_enable: std_logic; --fetch and decode don't need an explicit enable, we can use latch_pc. Execute is different since it needs to stall only on structural stalls
     begin
 
        --Instruction Fetch
@@ -408,7 +409,7 @@ architecture struct of DataPath is
             Q => im
         );
 
-
+        ex_enable<=not(done_mul_i or done_div_i);
          register_rd1: single_register
          generic map(
             N =>ADDR_WIDTH
@@ -417,7 +418,7 @@ architecture struct of DataPath is
             D => RD,
             CK => ClK,
             RESET => rst,
-            EN => PC_LATCH_EN,
+            EN => ex_enable,
             Q => rd1
         );
 
@@ -492,11 +493,12 @@ architecture struct of DataPath is
             STANDARD_OUT => std_out,
             MUL_OUT => mul_out, 
             DIV_OUT => div_out,
-            DONE_DIV=> DIVISION_ENDED, 
-            DONE_MUL => MULTIPLICATION_ENDED
+            DONE_DIV=> done_div_i, 
+            DONE_MUL => done_mul_i
 
         );
-
+        MULTIPLICATION_ENDED<=done_mul_i;
+        DIVISION_ENDED<=done_div_i;
         mux_alu_comb_seq: MUX21_GENERIC
 
          generic map(
@@ -557,7 +559,7 @@ architecture struct of DataPath is
             D => rd1,
             CK => CLK,
             RESET => RST,
-            EN => PC_LATCH_EN,
+            EN => '1',
             Q => mul_stages_rd(0)
         );
         --MEMORY
@@ -608,7 +610,7 @@ architecture struct of DataPath is
               D     => mul_stages_rd(i),
               CK    => CLK,
               RESET => RST,
-              EN    => PC_LATCH_EN,  
+              EN    => ex_enable,  
               Q     => mul_stages_rd(i+1)
             );
         end generate;
@@ -672,7 +674,7 @@ architecture struct of DataPath is
             D => rd2,
             CK => CLK,
             RESET => RST,
-            EN => PC_LATCH_EN,
+            EN => '1',
             Q => rd3
         );
         --WRITE BACK
