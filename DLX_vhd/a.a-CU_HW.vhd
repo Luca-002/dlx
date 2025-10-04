@@ -206,7 +206,7 @@ begin  -- dlx_cu_rtl
       START_DIV <= '0';
       START_MUL <= '0';
       restore_cw <='0';
-      ALU_OUTREG_COMB_SEQ <='0';
+      ALU_OUTREG_COMB_SEQ <='1';
       ALU_OUTREG_MUL_DIV <= '0';
     elsif Clk'event and Clk = '1' then  -- rising clock
 

@@ -311,11 +311,8 @@ begin
     if rst = '1' then
         multiplier_finished_tracker <= (others => '0');
         DONE_MUL <= '0';
-        STANDARD_OUT<= (others => '0'); 
-        DIV_OUT <= (others => '0');    
-        MUL_OUT <= (others => '0');    
-        DONE_DIV <= '0';   
-        DONE_MUL  <= '0';  
+        DIV_OUT <= (others => '0');      
+        DONE_DIV <= '0';    
     elsif rising_edge(clk) then
         if op = MULT then
             multiplier_finished_tracker(0) <= '1';

@@ -204,7 +204,7 @@ architecture struct of DataPath is
     signal byte_skew: STD_LOGIC;
     type stage_array is array (0 to 8) of std_logic_vector(ADDR_WIDTH-1 downto 0);
     signal mul_stages_rd : stage_array; 
-    signal std_rd, mul_rd, div_rd, seq_rd: STD_LOGIC_VECTOR(4 DOWNTO 0);
+    signal mul_rd, div_rd, seq_rd, rd2_tmp: STD_LOGIC_VECTOR(4 DOWNTO 0);
     signal done_div_i, done_mul_i: std_logic;
     signal ex_enable: std_logic; --fetch and decode don't need an explicit enable, we can use latch_pc. Execute is different since it needs to stall only on structural stalls
     begin
@@ -556,11 +556,11 @@ architecture struct of DataPath is
             N => ADDR_WIDTH
         )
          port map(
-            D => rd1,
+            D => rd2_tmp,
             CK => CLK,
             RESET => RST,
             EN => '1',
-            Q => mul_stages_rd(0)
+            Q => rd2
         );
         --MEMORY
         byte_skew<=BYTE;
@@ -596,7 +596,7 @@ architecture struct of DataPath is
             N => ADDR_WIDTH
         )
          port map(
-            D => mul_stages_rd(0),
+            D => rd1,
             CK => CLK,
             RESET => RST,
             EN => START_MUL,
@@ -647,10 +647,10 @@ architecture struct of DataPath is
         )
          port map(
 
-            A => std_rd,
+            A => rd1,
             B => seq_rd,
             SEL => ALU_OUTREG_COMB_SEQ,
-            Y => rd2
+            Y => rd2_tmp
         );
 
         mux_rd_mul_div: MUX21_GENERIC
