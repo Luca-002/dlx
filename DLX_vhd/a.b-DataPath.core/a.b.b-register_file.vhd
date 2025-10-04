@@ -34,11 +34,18 @@ architecture Behavioral of register_file is
     signal REGISTERS : REG_ARRAY := (others => (others => '0')); 
 
 begin 
-    OUT1 <= (others => '0') when to_integer(unsigned(ADD_RD1)) = 0 else
+
+    OUT1 <= (others => '0')
+            when to_integer(unsigned(ADD_RD1)) = 0 else
+            DATAIN
+            when (RD1 = '1' and WR = '1' and ENABLE = '1' and ADD_RD1 = ADD_WR and to_integer(unsigned(ADD_WR)) /= 0) else
             REGISTERS(to_integer(unsigned(ADD_RD1))) when RD1 = '1' else
             (others => 'Z');
 
-    OUT2 <= (others => '0') when to_integer(unsigned(ADD_RD2)) = 0 else
+    OUT2 <= (others => '0')
+            when to_integer(unsigned(ADD_RD2)) = 0 else
+            DATAIN
+            when (RD2 = '1' and WR = '1' and ENABLE = '1' and ADD_RD2 = ADD_WR and to_integer(unsigned(ADD_WR)) /= 0) else
             REGISTERS(to_integer(unsigned(ADD_RD2))) when RD2 = '1' else
             (others => 'Z');
             
@@ -52,9 +59,9 @@ begin
                     if HALF_WORD = '1' then
                         if H_L = '1' then
                             REGISTERS(to_integer(unsigned(ADD_WR)))(DATA_WIDTH-1 downto DATA_WIDTH-16) <= DATAIN(16-1 downto 0);
-							REGISTERS(to_integer(unsigned(ADD_WR)))(DATA_WIDTH-17 downto 0) <= (others => '0');
+                            REGISTERS(to_integer(unsigned(ADD_WR)))(DATA_WIDTH-17 downto 0) <= (others => '0');
                         else
-							REGISTERS(to_integer(unsigned(ADD_WR)))(15 downto 0) <= DATAIN(15 downto 0);
+                            REGISTERS(to_integer(unsigned(ADD_WR)))(15 downto 0) <= DATAIN(15 downto 0);
                             if S_U = '1' then
                                 REGISTERS(to_integer(unsigned(ADD_WR)))(DATA_WIDTH-1 downto 16) <= (others => DATAIN(15));
                             else
@@ -73,7 +80,6 @@ begin
                                 REGISTERS(to_integer(unsigned(ADD_WR)))(DATA_WIDTH-1 downto 8) <= (others => '0');
                             end if;
                         end if;
-
                     else
                         REGISTERS(to_integer(unsigned(ADD_WR))) <= DATAIN;
                     end if;
@@ -83,3 +89,4 @@ begin
     end process;
 
 end Behavioral;
+
