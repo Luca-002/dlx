@@ -102,10 +102,10 @@ architecture dlx_cu_hw of dlx_cu is
                                 "000000000000000000000000",
                                 "111011011010000101110001", --lb
                                 "000000000000000000000000",
+                                "000000000000000000000000",
                                 "111011011010000001110000", --LW
                                 "111011011010000101110000", --LBU
                                 "111011011010000001110100", --LHU
-                                "000000000000000000000000",
                                 "000000000000000000000000",
                                 "000000000000000000000000",
                                 "111111111011000110000000", --SB
@@ -220,6 +220,8 @@ begin  -- dlx_cu_rtl
         aluOpcode2 <= NOP;
         aluOpcode3 <= NOP;
         IR1 <= (others => '0');
+        cw4 <= cw3(CW_SIZE - 1 - 9 downto 0); 
+        cw5 <= cw4(CW_SIZE -1 - 13 downto 0);
 
       elsif DIVISION_ENDED = '1' then 
         cw4 <= cw3(CW_SIZE - 1 - 9 downto 0); 
@@ -332,14 +334,19 @@ begin  -- dlx_cu_rtl
 	end process ALU_OP_CODE_P;
   IR_i<=IR_IN;
   RS1<=IR1(25 downto 21);
-  ASSIGN_RS2_RD_AND_IM : process (IR_opcode1)
+  ASSIGN_RS2_RD_AND_IM : process (IR1,IR_opcode1)
    begin  
 	case to_integer(unsigned(IR_opcode1)) is
     when 0 => RS2<=IR1(20 downto 16);
       RD <=IR1(15 downto 11);
+    when 2 | 3 => RS2<= (others =>'0');
+     RD<= (others => '0');
+    when 40 | 43 => RS2<=IR1(20 downto 16);
+      RD<= (others => '0');
     when others => RD <=IR1(20 downto 16);
+      RS2<= (others => '0');
     end case;
-  case to_integer(unsigned(IR_opcode)) is
+  case to_integer(unsigned(IR_opcode1)) is
     when 2 | 3 => IM <=(32-26-1 downto 0 =>IR1(25))&IR1(25 downto 0);
     when 12 | 13 | 14 |20 | 22 | 23 | 15 => IM <= (32-16-1 downto 0 =>'0')&IR1(15 downto 0);
     when others => IM <= (32-16-1 downto 0 =>IR1(15))&IR1(15 downto 0);

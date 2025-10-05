@@ -193,7 +193,7 @@ architecture struct of DataPath is
     signal data_wb, wb_reg, out_mux_pc_wbreg: STD_LOGIC_VECTOR(DATA_WIDTH-1 downto 0);   
     signal branch_cond_nor_jump: STD_LOGIC;
     signal btb_target: STD_LOGIC_VECTOR(DATA_WIDTH-1 downto 0);
-    signal pc1,pc2,pc3: STD_LOGIC_VECTOR(DATA_WIDTH-1 downto 0);
+    signal pc1,pc2,pc3, npc, npc1: STD_LOGIC_VECTOR(DATA_WIDTH-1 downto 0);
     signal pc_btb_mux_out: STD_LOGIC_VECTOR(DATA_WIDTH-1 downto 0);
     signal btb_hit,hit1,hit2: STD_LOGIC_VECTOR(0 downto 0);
     signal jump_and_nothit: STD_LOGIC;
@@ -256,7 +256,29 @@ architecture struct of DataPath is
               RESET => RST,
               EN => PC_LATCH_EN,
               Q     => pc3
-            );    
+            ); 
+        register_npc: single_register
+            generic map(
+                N => DATA_WIDTH
+                )
+            port map(
+              D     => pc_plus4,
+              CK    => CLK,
+              RESET => RST,
+              EN => PC_LATCH_EN,
+              Q     => npc
+            );
+        register_npc1: single_register
+            generic map(
+                N => DATA_WIDTH
+                )
+            port map(
+              D     => npc,
+              CK    => CLK,
+              RESET => RST,
+              EN => PC_LATCH_EN,
+              Q     => npc1
+            );   
         PC_TO_IRAM<=pc;
         PC_adder: adder
             generic map(
@@ -341,7 +363,7 @@ architecture struct of DataPath is
             NBIT => DATA_WIDTH
         )
          port map(
-            A => pc2,
+            A => npc1,
             B => pc_next,
             SEL => restore_pc,
             Y => pc_final

@@ -22,12 +22,12 @@ architecture Behavioral of DRAM is
     type mem_type is array (0 to (2**ADDR_WIDTH)-1) of std_logic_vector(DATA_WIDTH-1 downto 0);
     signal mem : mem_type := (others => (others => '0'));
 begin
+    data_out <= mem(to_integer(unsigned(addr)));
     process(clk)
     begin
         if rising_edge(clk) then
             if reset = '1' then
                 mem <= (others => (others => '0'));
-                data_out <= (others => '0');
             else
                 if we = '1' then
                     if BYTE = '1' then
@@ -36,7 +36,6 @@ begin
                         mem(to_integer(unsigned(addr))) <= data_in; 
                     end if;
                 end if;
-                data_out <= mem(to_integer(unsigned(addr)));
             end if;
         end if;
     end process;
