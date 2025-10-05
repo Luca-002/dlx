@@ -69,7 +69,7 @@ end dlx_cu;
 architecture dlx_cu_hw of dlx_cu is
   type mem_array is array (integer range 0 to MICROCODE_MEM_SIZE - 1) of std_logic_vector(CW_SIZE - 1 downto 0);
   signal cw_mem : mem_array := ("111101111110000001010000", -- R type
-                                "000000000000000000000000",
+                                "111101111110000001010000", -- mul and div
                                 "110010000000011000000000", -- J 
                                 "110010000000011000011000", -- JAL 
                                 "111011010000110000000000", -- BEQZ 
@@ -172,13 +172,13 @@ begin  -- dlx_cu_rtl
   RF_EN         <=cw2(CW_SIZE - 8)  and not(not(CAN_READ) or not(CAN_WRITE) or MULTIPLICATION_ENDED or DIVISION_ENDED);
   --EX 
  
-  ALU_OUTREG_EN <=cw3(CW_SIZE - 9) and not(MULTIPLICATION_ENDED or DIVISION_ENDED);
-  MUX_B         <=cw3(CW_SIZE - 10) and not(MULTIPLICATION_ENDED or DIVISION_ENDED);
-  MUX_A         <=cw3(CW_SIZE - 11) and not(MULTIPLICATION_ENDED or DIVISION_ENDED);
-  MEM_LATCH_EN  <=cw3(CW_SIZE - 12) and not(MULTIPLICATION_ENDED or DIVISION_ENDED);
-  EQ_COND       <=cw3(CW_SIZE - 13) and not(MULTIPLICATION_ENDED or DIVISION_ENDED);
-  JUMP_EN       <=cw3(CW_SIZE - 14) and not(MULTIPLICATION_ENDED or DIVISION_ENDED);
-  JUMP          <=cw3(CW_SIZE - 15) and not(MULTIPLICATION_ENDED or DIVISION_ENDED);
+  ALU_OUTREG_EN <=cw3(CW_SIZE - 9) ;
+  MUX_B         <=cw3(CW_SIZE - 10);
+  MUX_A         <=cw3(CW_SIZE - 11);
+  MEM_LATCH_EN  <=cw3(CW_SIZE - 12);
+  EQ_COND       <=cw3(CW_SIZE - 13);
+  JUMP_EN       <=cw3(CW_SIZE - 14);
+  JUMP          <=cw3(CW_SIZE - 15);
   --MEM 
   BYTE          <=cw4(CW_SIZE - 16);
   DRAM_WE       <=cw4(CW_SIZE - 17);
@@ -207,7 +207,6 @@ begin  -- dlx_cu_rtl
       IR1 <= (others => '0');
       START_DIV <= '0';
       START_MUL <= '0';
-      restore_cw <='0';
       ALU_OUTREG_COMB_SEQ <='1';
       ALU_OUTREG_MUL_DIV <= '0';
     elsif Clk'event and Clk = '1' then  -- rising clock
@@ -223,23 +222,24 @@ begin  -- dlx_cu_rtl
         cw4 <= cw3(CW_SIZE - 1 - 9 downto 0); 
         cw5 <= cw4(CW_SIZE -1 - 13 downto 0);
 
-      elsif DIVISION_ENDED = '1' then 
+      elsif MULTIPLICATION_ENDED = '1' then
+        cw3<="1111110000001010000";
         cw4 <= cw3(CW_SIZE - 1 - 9 downto 0); 
         cw5 <= cw4(CW_SIZE -1 - 13 downto 0);
         ALU_OUTREG_MUL_DIV<='1';
-        ALU_OUTREG_COMB_SEQ<='1';
+        ALU_OUTREG_COMB_SEQ<='0';
 
-      elsif MULTIPLICATION_ENDED = '1' then
+      elsif DIVISION_ENDED = '1' then 
         cw4 <= cw3(CW_SIZE - 1 - 9 downto 0); 
         cw5 <= cw4(CW_SIZE -1 - 13 downto 0);
         ALU_OUTREG_MUL_DIV<='0';
-        ALU_OUTREG_COMB_SEQ<='1';
+        ALU_OUTREG_COMB_SEQ<='0';
 
       elsif (CAN_READ = '0') or (CAN_WRITE = '0') then
         cw3 <= (others => '0');
         cw4 <= cw3(CW_SIZE - 1 - 9 downto 0); 
         cw5 <= cw4(CW_SIZE -1 - 13 downto 0);
-
+        
       else
         cw2 <= cw1(CW_SIZE - 1 - 2 downto 0);
         cw3 <= cw2(CW_SIZE - 1 - 5 downto 0);
@@ -248,12 +248,18 @@ begin  -- dlx_cu_rtl
         aluOpcode1 <= aluOpcode_i;
         aluOpcode2 <= aluOpcode1;
         aluOpcode3 <= aluOpcode2;
-        if aluOpcode2 = DIV then 
+        if aluOpcode1 = DIV then 
           START_DIV <= '1';
+        else
+          START_DIV <='0';
         end if;
-        if aluOpcode2 = MULT then 
+        if aluOpcode1 = MULT then 
           START_MUL <= '1';
+        else
+          START_MUL <='0';
         end if;
+        ALU_OUTREG_COMB_SEQ <='1';
+        ALU_OUTREG_MUL_DIV <= '0';
         IR1<=IR_i;
       end if;
 
@@ -292,10 +298,14 @@ begin  -- dlx_cu_rtl
         when 59 => aluOpcode_i <= SGTU; -- sgtu
         when 60 => aluOpcode_i <= SLEU; -- sleu
         when 61 => aluOpcode_i <= SGEU; -- sgeu
-        when 14 => aluOpcode_i <= MULT; -- mult
-        when 15 => aluOpcode_i <= DIV; -- div
 				when others => aluOpcode_i <= NOP;
 			end case;
+    when 1 =>
+        case to_integer(unsigned(IR_func)) is
+        when 14 => aluOpcode_i <= MULT; -- mult
+        when 15 => aluOpcode_i <= DIV; -- div
+        when others => aluOpcode_i <= NOP;
+        end case;
 		when 2 => aluOpcode_i <= ALU_ADD; -- j
 		when 3 => aluOpcode_i <= ALU_ADD; -- jal
     when 4 => aluOpcode_i <= ALU_ADD; -- BEQZ 
@@ -337,7 +347,7 @@ begin  -- dlx_cu_rtl
   ASSIGN_RS2_RD_AND_IM : process (IR1,IR_opcode1)
    begin  
 	case to_integer(unsigned(IR_opcode1)) is
-    when 0 => RS2<=IR1(20 downto 16);
+    when 0 | 1 => RS2<=IR1(20 downto 16);
       RD <=IR1(15 downto 11);
     when 2 | 3 => RS2<= (others =>'0');
      RD<= (others => '0');

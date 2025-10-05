@@ -20,8 +20,7 @@ entity alu is
         STANDARD_OUT                : out std_logic_vector(DATA_WIDTH-1 downto 0);
         DIV_OUT                     : OUT STD_LOGIC_VECTOR(DATA_WIDTH-1 DOWNTO 0);
         MUL_OUT                     : OUT STD_LOGIC_VECTOR(DATA_WIDTH-1 DOWNTO 0);
-        DONE_DIV                : out std_logic;
-        DONE_MUL                : out std_logic
+        DONE_DIV                : out std_logic
 
     );
 end alu;
@@ -126,7 +125,6 @@ architecture struct of alu is
         signal div_quotient, div_remainder: STD_LOGIC_VECTOR(DATA_WIDTH -1 downto 0);
         signal div_start, div_done: STD_LOGIC;
         signal A_ge_u, A_gt_u, A_le_u, A_lt_u: STD_LOGIC;
-        signal multiplier_finished_tracker: STD_LOGIC_VECTOR(1 downto 0); 
     begin
     cin_adder<= '1' when op = ALU_SUB else '0';
         
@@ -214,6 +212,11 @@ architecture struct of alu is
         A_ge_u, A_gt_u, A_lt_u)  
         begin
             case op is
+                when DIV =>
+                    div_start <='1';
+                when others => div_start <='0';
+                end case;
+            case op is
                 when NOP =>  
                     STANDARD_OUT <= (others => '0');
                 when B =>
@@ -296,34 +299,14 @@ architecture struct of alu is
                         STANDARD_OUT <= (DATA_WIDTH-1 downto 1 => '0') & '1';
                     else
                         STANDARD_OUT <= (others => '0');
-                    end if;
-                    
+                    end if;           
                 when others =>
                     STANDARD_OUT <= (others => '0');
             end case;
         MUL_OUT<=multiplier_out;
+        DIV_OUT<=div_quotient;
+        DONE_DIV<=div_done;
         end process;
-
-
-
-process(clk, rst)
-begin
-    if rst = '1' then
-        multiplier_finished_tracker <= (others => '0');
-        DONE_MUL <= '0';
-        DIV_OUT <= (others => '0');      
-        DONE_DIV <= '0';    
-    elsif rising_edge(clk) then
-        if op = MULT then
-            multiplier_finished_tracker(0) <= '1';
-        else
-            multiplier_finished_tracker(0) <= '0';
-        end if;
-
-        DONE_MUL <= multiplier_finished_tracker(1);
-        multiplier_finished_tracker(1) <= multiplier_finished_tracker(0);
-    end if;
-end process;
 
 
     

@@ -141,8 +141,7 @@ architecture struct of DataPath is
         STANDARD_OUT                : out std_logic_vector(DATA_WIDTH-1 downto 0);
         DIV_OUT                     : OUT STD_LOGIC_VECTOR(DATA_WIDTH-1 DOWNTO 0);
         MUL_OUT                     : OUT STD_LOGIC_VECTOR(DATA_WIDTH-1 DOWNTO 0);
-        DONE_DIV                : out std_logic;
-        DONE_MUL                : out std_logic
+        DONE_DIV                : out std_logic
     );
     end component;
         
@@ -205,8 +204,8 @@ architecture struct of DataPath is
     type stage_array is array (0 to 8) of std_logic_vector(ADDR_WIDTH-1 downto 0);
     signal can_read_i, can_write_i: STD_LOGIC;
     signal mul_stages_rd : stage_array; 
-    signal mul_rd, div_rd, seq_rd, rd2_tmp,rd_to_be_stored: STD_LOGIC_VECTOR(4 DOWNTO 0);
-    signal done_div_i, done_mul_i: std_logic;
+    signal mul_rd,mul_rd_tmp, div_rd,div_rd_tmp, seq_rd, rd2_tmp,rd_to_be_stored: STD_LOGIC_VECTOR(4 DOWNTO 0);
+    signal done_div_i, done_mul_i, div_rd_en: std_logic;
     signal ex_enable: std_logic; --fetch and decode don't need an explicit enable, we can use latch_pc. Execute is different since it needs to stall only on structural stalls
     begin
 
@@ -432,7 +431,7 @@ architecture struct of DataPath is
             Q => im
         );
 
-        ex_enable<=not(done_mul_i or done_div_i);
+        ex_enable<='1';
         rd_to_be_stored<=RD and (4 downto 0 => can_read_i) and (4 downto 0 => can_write_i);
          register_rd1: single_register
          generic map(
@@ -517,11 +516,9 @@ architecture struct of DataPath is
             STANDARD_OUT => std_out,
             MUL_OUT => mul_out, 
             DIV_OUT => div_out,
-            DONE_DIV=> done_div_i, 
-            DONE_MUL => done_mul_i
+            DONE_DIV=> done_div_i
 
         );
-        MULTIPLICATION_ENDED<=done_mul_i;
         DIVISION_ENDED<=done_div_i;
         mux_alu_comb_seq: MUX21_GENERIC
 
@@ -620,14 +617,14 @@ architecture struct of DataPath is
             N => ADDR_WIDTH
         )
          port map(
-            D => rd1,
+            D => mul_rd_tmp,
             CK => CLK,
             RESET => RST,
-            EN => START_MUL,
-            Q => mul_stages_rd(1)
+            EN => ex_enable,
+            Q => mul_stages_rd(2)
         );
-
-        shift_register_mul_backup: for i in 1 to 7 generate
+        mul_rd_tmp<=rd1 and (4 downto 0 => START_MUL);
+        shift_register_mul_backup: for i in 2 to 7 generate --the ones before aren't needed
           reg_inst: single_register
             generic map(N => ADDR_WIDTH)
             port map(
@@ -638,27 +635,28 @@ architecture struct of DataPath is
               Q     => mul_stages_rd(i+1)
             );
         end generate;
-
         mul_rd <= mul_stages_rd(8);
-
+        done_mul_i<=or_reduce(mul_stages_rd(7));
+        MULTIPLICATION_ENDED<=done_mul_i;
         register_div_backup: single_register
          generic map(
             N => ADDR_WIDTH
         )
          port map(
-            D => rd1,
+            D => div_rd_tmp,
             CK => CLK,
             RESET => RST,
-            EN => START_DIV,
+            EN => div_rd_en,
             Q => div_rd
         );
-       
+        div_rd_tmp<=rd1 and (4 downto 0 => not(done_div_i));
+       div_rd_en<=START_DIV or done_div_i;
 
        can_write_i <= not_equal(RD,div_rd) and not_equal(RD,mul_stages_rd(1)) and not_equal(RD,mul_stages_rd(2)) and not_equal(RD,mul_stages_rd(3)) and not_equal(RD,mul_stages_rd(4)) and 
                    not_equal(RD,mul_stages_rd(5)) and not_equal(RD,mul_stages_rd(6)) and not_equal(RD,mul_stages_rd(7));
 
        can_read_i <= not_equal(RS1, rd1) and not_equal(RS2, rd1) and not_equal(RS1, rd2) and not_equal(RS2, rd2) and 
-                   not_equal(RS1, rd3) and not_equal(RS2, rd3) and not_equal(RS1, div_rd) and not_equal(RS2, div_rd) and 
+                    not_equal(RS1, div_rd) and not_equal(RS2, div_rd) and 
                    not_equal(RS1, mul_stages_rd(8)) and not_equal(RS2, mul_stages_rd(8)) and not_equal(RS1, mul_stages_rd(7)) and not_equal(RS2, mul_stages_rd(7)) and 
                    not_equal(RS1, mul_stages_rd(6)) and not_equal(RS2, mul_stages_rd(6)) and not_equal(RS1, mul_stages_rd(5)) and not_equal(RS2, mul_stages_rd(5)) and 
                    not_equal(RS1, mul_stages_rd(4)) and not_equal(RS2, mul_stages_rd(4)) and not_equal(RS1, mul_stages_rd(3)) and not_equal(RS2, mul_stages_rd(3)) and 
