@@ -178,7 +178,6 @@ architecture struct of DataPath is
     );
     end component;
 
-    signal branch_taken: std_logic;
     signal pc, pc_next,pc_alu,pc_final: std_logic_vector(DATA_WIDTH-1 downto 0);    
     signal pc_plus4 : std_logic_vector(DATA_WIDTH-1 downto 0);
     signal rd1,rd2,rd3: STD_LOGIC_VECTOR(4 DOWNTO 0);
@@ -194,7 +193,7 @@ architecture struct of DataPath is
     signal btb_target: STD_LOGIC_VECTOR(DATA_WIDTH-1 downto 0);
     signal pc1,pc2,pc3, npc, npc1: STD_LOGIC_VECTOR(DATA_WIDTH-1 downto 0);
     signal pc_btb_mux_out: STD_LOGIC_VECTOR(DATA_WIDTH-1 downto 0);
-    signal btb_hit,hit1,hit2: STD_LOGIC_VECTOR(0 downto 0);
+    signal btb_hit,hit1,hit_f1,hit_f2,hit2,saved_branch_taken,branch_taken,branch_taken_tmp: STD_LOGIC_VECTOR(0 downto 0);
     signal jump_and_nothit: STD_LOGIC;
     signal write_address: STD_LOGIC_VECTOR(ADDR_WIDTH-1 downto 0);
     signal restore_pc: std_logic;
@@ -211,7 +210,6 @@ architecture struct of DataPath is
 
        --Instruction Fetch
 
-        
         register_pc: single_register
             generic map(
                 N => DATA_WIDTH
@@ -314,7 +312,7 @@ architecture struct of DataPath is
             reset => rst,
             pc => pc,
             pc_branch => pc2,         
-            branch_taken => branch_taken,
+            branch_taken => branch_taken(0),
             target_branch => jump_addr,
             update => btb_update,
             hit => btb_hit(0),
@@ -332,31 +330,45 @@ architecture struct of DataPath is
             SEL => btb_hit(0),
             Y => pc_btb_mux_out
         );
+        hit_f1(0)<=btb_hit(0) and not((branch_taken(0) or saved_branch_taken(0))xor hit2(0));
         register_hit1: single_register
             generic map(
                 N => 1
                 )
             port map(
-              D     => btb_hit,
+              D     => hit_f1,
               CK    => CLK,
               RESET => RST,
               EN => PC_LATCH_EN,
               Q     => hit1
             );
+        hit_f2(0)<=hit1(0) and not((branch_taken(0) or saved_branch_taken(0))xor hit2(0));
         register_hit2: single_register
             generic map(
                 N => 1
                 )
             port map(   
-              D     => hit1,
+              D     => hit_f2,
               CK    => CLK,
               RESET => RST,
               EN => PC_LATCH_EN,
               Q     => hit2
             );
-        branch_taken<=(not branch_cond_nor_jump) and JUMP_EN;
-        FLUSH<=branch_taken xor hit2(0);
-        restore_pc<=hit2(0) and (not(branch_taken));
+        branch_taken(0)<=(not branch_cond_nor_jump) and JUMP_EN;
+        branch_taken_tmp(0)<=branch_taken(0) and (not(can_read_i) or not(can_write_i));
+        register_savedbranchtaken: single_register
+            generic map(
+                N => 1
+                )
+            port map(   
+              D     => branch_taken_tmp,
+              CK    => CLK,
+              RESET => RST,
+              EN => '1',
+              Q     => saved_branch_taken
+            );
+        FLUSH<=(branch_taken(0) or saved_branch_taken(0))xor hit2(0);
+        restore_pc<=hit2(0) and (not(branch_taken(0)))and (not(saved_branch_taken(0)));
          mux_pc2_pcnext: MUX21_GENERIC
          generic map(
             NBIT => DATA_WIDTH

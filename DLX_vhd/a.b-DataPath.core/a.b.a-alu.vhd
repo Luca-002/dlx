@@ -125,8 +125,19 @@ architecture struct of alu is
         signal div_start, div_done: STD_LOGIC;
         signal A_ge_u, A_gt_u, A_le_u, A_lt_u: STD_LOGIC;
     begin
-    cin_adder<= '1' when op = ALU_SUB else '0';
-        
+    cin_adder <= '1' when op = ALU_SUB or
+                     op = SUBU or
+                     op = SEQ or
+                     op = SNE or
+                     op = SGE or
+                     op = SGEU or
+                     op = SLE or
+                     op = SLEU or
+                     op = SGT or
+                     op = SGTU or
+                     op = SLT or
+                     op = SLTU
+             else '0';
     alu_adder: adder
         generic map (
             NBIT => DATA_WIDTH,
