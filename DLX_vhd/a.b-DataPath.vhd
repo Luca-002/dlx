@@ -204,7 +204,7 @@ architecture struct of DataPath is
     type stage_array is array (0 to 8) of std_logic_vector(ADDR_WIDTH-1 downto 0);
     signal can_read_i, can_write_i: STD_LOGIC;
     signal mul_stages_rd : stage_array; 
-    signal mul_rd,mul_rd_tmp, div_rd,div_rd_tmp, seq_rd, rd2_tmp,rd_to_be_stored: STD_LOGIC_VECTOR(4 DOWNTO 0);
+    signal mul_rd,mul_rd_tmp, div_rd,div_rd2,div_rd_tmp, seq_rd, rd2_tmp,rd_to_be_stored: STD_LOGIC_VECTOR(4 DOWNTO 0);
     signal done_div_i, done_mul_i, div_rd_en: std_logic;
     signal ex_enable: std_logic; --fetch and decode don't need an explicit enable, we can use latch_pc. Execute is different since it needs to stall only on structural stalls
     begin
@@ -517,7 +517,6 @@ architecture struct of DataPath is
             MUL_OUT => mul_out, 
             DIV_OUT => div_out,
             DONE_DIV=> done_div_i
-
         );
         DIVISION_ENDED<=done_div_i;
         mux_alu_comb_seq: MUX21_GENERIC
@@ -651,12 +650,22 @@ architecture struct of DataPath is
         );
         div_rd_tmp<=rd1 and (4 downto 0 => not(done_div_i));
        div_rd_en<=START_DIV or done_div_i;
-
+        register_div2_backup: single_register
+         generic map(
+            N => ADDR_WIDTH
+        )
+         port map(
+            D => div_rd,
+            CK => CLK,
+            RESET => RST,
+            EN => '1',
+            Q => div_rd2
+        );
        can_write_i <= not_equal(RD,div_rd) and not_equal(RD,mul_stages_rd(1)) and not_equal(RD,mul_stages_rd(2)) and not_equal(RD,mul_stages_rd(3)) and not_equal(RD,mul_stages_rd(4)) and 
                    not_equal(RD,mul_stages_rd(5)) and not_equal(RD,mul_stages_rd(6)) and not_equal(RD,mul_stages_rd(7));
 
-       can_read_i <= not_equal(RS1, rd1) and not_equal(RS2, rd1) and not_equal(RS1, rd2) and not_equal(RS2, rd2) and 
-                    not_equal(RS1, div_rd) and not_equal(RS2, div_rd) and 
+       can_read_i <=not_equal(RS1, rd1) and not_equal(RS2, rd1) and not_equal(RS1, rd2) and not_equal(RS2, rd2) and 
+                    not_equal(RS1, div_rd) and not_equal(RS2, div_rd) and not_equal(RS1, div_rd2) and not_equal(RS2, div_rd2) and
                    not_equal(RS1, mul_stages_rd(8)) and not_equal(RS2, mul_stages_rd(8)) and not_equal(RS1, mul_stages_rd(7)) and not_equal(RS2, mul_stages_rd(7)) and 
                    not_equal(RS1, mul_stages_rd(6)) and not_equal(RS2, mul_stages_rd(6)) and not_equal(RS1, mul_stages_rd(5)) and not_equal(RS2, mul_stages_rd(5)) and 
                    not_equal(RS1, mul_stages_rd(4)) and not_equal(RS2, mul_stages_rd(4)) and not_equal(RS1, mul_stages_rd(3)) and not_equal(RS2, mul_stages_rd(3)) and 
@@ -684,7 +693,7 @@ architecture struct of DataPath is
          port map(
 
             A => mul_rd,
-            B => div_rd,
+            B => div_rd2,
             SEL => ALU_OUTREG_MUL_DIV,
             Y => seq_rd
         );

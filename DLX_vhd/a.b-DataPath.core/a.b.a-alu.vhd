@@ -21,7 +21,6 @@ entity alu is
         DIV_OUT                     : OUT STD_LOGIC_VECTOR(DATA_WIDTH-1 DOWNTO 0);
         MUL_OUT                     : OUT STD_LOGIC_VECTOR(DATA_WIDTH-1 DOWNTO 0);
         DONE_DIV                : out std_logic
-
     );
 end alu;
 
@@ -206,7 +205,10 @@ architecture struct of alu is
         A_gt_u => A_gt_u,
         A_le_u => A_le_u,
         A_lt_u => A_lt_u
-    );    
+    ); 
+    MUL_OUT<=multiplier_out;
+    DIV_OUT<=div_quotient;
+    DONE_DIV<=div_done;   
        process(op, adder_out, shifter_out, multiplier_out, logic_out,
         A_eq_B, A_gt_or_eq_B, A_gt_B, A_lt_or_eq_B, A_lt_B,
         A_ge_u, A_gt_u, A_lt_u)  
@@ -303,9 +305,7 @@ architecture struct of alu is
                 when others =>
                     STANDARD_OUT <= (others => '0');
             end case;
-        MUL_OUT<=multiplier_out;
-        DIV_OUT<=div_quotient;
-        DONE_DIV<=div_done;
+        
         end process;
 
 

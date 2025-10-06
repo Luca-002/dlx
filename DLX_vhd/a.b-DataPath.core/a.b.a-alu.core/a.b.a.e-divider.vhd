@@ -188,6 +188,8 @@ architecture behavioral of divider is
                                     end_signal<='1';
                                 end if;
                             end if;
+                        else
+                            done<='0';
                         end if;
                     end if;
                 end if;

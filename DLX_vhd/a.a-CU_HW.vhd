@@ -152,7 +152,7 @@ architecture dlx_cu_hw of dlx_cu is
   signal aluOpcode3: aluOp := NOP;
 
   signal IR_i,IR1: STD_LOGIC_VECTOR(31 downto 0);
- 
+  signal div_working: std_logic;
 begin  -- dlx_cu_rtl
 
   IR_opcode(5 downto 0) <= IR_IN(31 downto 26);
@@ -209,6 +209,7 @@ begin  -- dlx_cu_rtl
       START_MUL <= '0';
       ALU_OUTREG_COMB_SEQ <='1';
       ALU_OUTREG_MUL_DIV <= '0';
+      div_working<='0';
     elsif Clk'event and Clk = '1' then  -- rising clock
 
       if FLUSH='1' then
@@ -230,6 +231,8 @@ begin  -- dlx_cu_rtl
         ALU_OUTREG_COMB_SEQ<='0';
 
       elsif DIVISION_ENDED = '1' then 
+        div_working<='0';
+        cw3<="1111110000001010000";
         cw4 <= cw3(CW_SIZE - 1 - 9 downto 0); 
         cw5 <= cw4(CW_SIZE -1 - 13 downto 0);
         ALU_OUTREG_MUL_DIV<='0';
@@ -240,6 +243,11 @@ begin  -- dlx_cu_rtl
         cw4 <= cw3(CW_SIZE - 1 - 9 downto 0); 
         cw5 <= cw4(CW_SIZE -1 - 13 downto 0);
         
+      elsif div_working='1' and aluOpcode1=DIV then
+        cw3 <= (others => '0');
+        cw4 <= cw3(CW_SIZE - 1 - 9 downto 0); 
+        cw5 <= cw4(CW_SIZE -1 - 13 downto 0);
+        START_DIV <='0';
       else
         cw2 <= cw1(CW_SIZE - 1 - 2 downto 0);
         cw3 <= cw2(CW_SIZE - 1 - 5 downto 0);
@@ -250,6 +258,7 @@ begin  -- dlx_cu_rtl
         aluOpcode3 <= aluOpcode2;
         if aluOpcode1 = DIV then 
           START_DIV <= '1';
+          div_working<='1';
         else
           START_DIV <='0';
         end if;
