@@ -199,7 +199,7 @@ architecture struct of DataPath is
     signal restore_pc: std_logic;
     signal btb_update: std_logic;
     signal rf_enable: std_logic;
-    signal byte_skew: STD_LOGIC;
+    signal byte_skew,byte_signal: STD_LOGIC_VECTOR(0 downto 0);
     type stage_array is array (0 to 8) of std_logic_vector(ADDR_WIDTH-1 downto 0);
     signal can_read_i, can_write_i: STD_LOGIC;
     signal mul_stages_rd : stage_array; 
@@ -390,7 +390,7 @@ architecture struct of DataPath is
             CLK => CLK,
             RESET => RST,
             ENABLE => rf_enable,
-            BYTE=>byte_skew,         
+            BYTE=>byte_skew(0),         
             HALF_WORD=>HALF_WORD,
             H_L =>H_L,           
             S_U =>S_U, 		
@@ -595,7 +595,18 @@ architecture struct of DataPath is
             Q => rd2
         );
         --MEMORY
-        byte_skew<=BYTE;
+        register_byte: single_register
+         generic map(
+            N => 1
+        )
+         port map(
+            D => byte_signal,
+            CK => CLK,
+            RESET => RST,
+            EN => '1',
+            Q => byte_skew
+        );
+        byte_signal(0)<=BYTE;
         DATA_TO_MEM<=me;
         MEM_ADDRESS<=alu_out_reg;
 

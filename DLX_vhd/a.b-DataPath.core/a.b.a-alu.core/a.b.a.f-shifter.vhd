@@ -57,7 +57,7 @@ begin
                     temp := std_logic_vector(shift_right(unsigned(A), shift_amt));
                 end if;
             else
-                -- Left shift (same for both)
+                -- Left shift 
                 if LOGIC_ARITH = '0' then
                     temp := std_logic_vector(shift_left(signed(A), shift_amt));
                 else
