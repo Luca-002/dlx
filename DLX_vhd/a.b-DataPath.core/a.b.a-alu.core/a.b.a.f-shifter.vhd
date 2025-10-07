@@ -16,14 +16,14 @@ end entity shifter;
 
 architecture BEHAVIORAL of shifter is
     function rotate_left(val: std_logic_vector; shamt: integer) return std_logic_vector is
-        variable temp: std_logic_vector(val'range);
+        variable temp: std_logic_vector(N-1 downto 0);
     begin
         temp := val(N-1-shamt downto 0) & val(N-1 downto N-shamt);
         return temp;
     end function;
 
     function rotate_right(val: std_logic_vector; shamt: integer) return std_logic_vector is
-        variable temp: std_logic_vector(val'range);
+        variable temp: std_logic_vector(N-1 downto 0);
     begin
         temp := val(shamt-1 downto 0) & val(N-1 downto shamt);
         return temp;
@@ -56,7 +56,7 @@ begin
                     temp := std_logic_vector(shift_right(unsigned(A), shift_amt));
                 end if;
             else
-                -- Left shift (same for both)
+                -- Left shift 
                 if LOGIC_ARITH = '0' then
                     temp := std_logic_vector(shift_left(signed(A), shift_amt));
                 else

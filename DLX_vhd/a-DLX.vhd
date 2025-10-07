@@ -119,7 +119,7 @@ architecture dlx_rtl of DLX is
     OP_CODE_SIZE       :     integer := 6;  -- Op Code Size
     -- ALU_OPC_SIZE       :     integer := 6;  -- ALU Op Code Word Size
     IR_SIZE            :     integer := 32;  -- Instruction Register Size    
-    CW_SIZE            :     integer := 23);  -- Control Word Size
+    CW_SIZE            :     integer := 24);  -- Control Word Size
   port (
     Clk                : in  std_logic;  -- Clock
     Rst                : in  std_logic;  -- Reset:Active-Low
@@ -162,7 +162,7 @@ architecture dlx_rtl of DLX is
     ALU_OUTREG_COMB_SEQ: out STD_LOGIC;
     --MEM
     BYTE             : out std_logic;
-
+    DRAM_WE          : out std_logic;
     LMD_LATCH_EN       : out std_logic;
     SEL_MEM_ALU                      : out std_logic;  
     --WB
@@ -320,7 +320,7 @@ architecture dlx_rtl of DLX is
       FUNC_SIZE => 11,
       OP_CODE_SIZE => 6,
       IR_SIZE => 32,
-      CW_SIZE => 23
+      CW_SIZE => 24
     )
     port map (
       Clk   => Clk,
@@ -362,6 +362,7 @@ architecture dlx_rtl of DLX is
 
       -- MEM
       BYTE          => BYTE_i,
+      DRAM_WE => DRAM_WE_i,
       JUMP_EN       => JUMP_EN_i,
       JUMP          => JUMP_i,
       LMD_LATCH_EN  => LMD_LATCH_EN_i,

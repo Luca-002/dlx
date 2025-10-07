@@ -141,8 +141,7 @@ architecture struct of DataPath is
         STANDARD_OUT                : out std_logic_vector(DATA_WIDTH-1 downto 0);
         DIV_OUT                     : OUT STD_LOGIC_VECTOR(DATA_WIDTH-1 DOWNTO 0);
         MUL_OUT                     : OUT STD_LOGIC_VECTOR(DATA_WIDTH-1 DOWNTO 0);
-        DONE_DIV                : out std_logic;
-        DONE_MUL                : out std_logic
+        DONE_DIV                : out std_logic
     );
     end component;
         
@@ -179,7 +178,6 @@ architecture struct of DataPath is
     );
     end component;
 
-    signal branch_taken: std_logic;
     signal pc, pc_next,pc_alu,pc_final: std_logic_vector(DATA_WIDTH-1 downto 0);    
     signal pc_plus4 : std_logic_vector(DATA_WIDTH-1 downto 0);
     signal rd1,rd2,rd3: STD_LOGIC_VECTOR(4 DOWNTO 0);
@@ -193,25 +191,25 @@ architecture struct of DataPath is
     signal data_wb, wb_reg, out_mux_pc_wbreg: STD_LOGIC_VECTOR(DATA_WIDTH-1 downto 0);   
     signal branch_cond_nor_jump: STD_LOGIC;
     signal btb_target: STD_LOGIC_VECTOR(DATA_WIDTH-1 downto 0);
-    signal pc1,pc2,pc3: STD_LOGIC_VECTOR(DATA_WIDTH-1 downto 0);
+    signal pc1,pc2,pc3, npc, npc1: STD_LOGIC_VECTOR(DATA_WIDTH-1 downto 0);
     signal pc_btb_mux_out: STD_LOGIC_VECTOR(DATA_WIDTH-1 downto 0);
-    signal btb_hit,hit1,hit2: STD_LOGIC_VECTOR(0 downto 0);
+    signal btb_hit,hit1,hit_f1,hit_f2,hit2,saved_branch_taken,branch_taken,branch_taken_tmp: STD_LOGIC_VECTOR(0 downto 0);
     signal jump_and_nothit: STD_LOGIC;
     signal write_address: STD_LOGIC_VECTOR(ADDR_WIDTH-1 downto 0);
     signal restore_pc: std_logic;
     signal btb_update: std_logic;
     signal rf_enable: std_logic;
-    signal byte_skew: STD_LOGIC;
+    signal byte_skew,byte_signal: STD_LOGIC_VECTOR(0 downto 0);
     type stage_array is array (0 to 8) of std_logic_vector(ADDR_WIDTH-1 downto 0);
+    signal can_read_i, can_write_i: STD_LOGIC;
     signal mul_stages_rd : stage_array; 
-    signal std_rd, mul_rd, div_rd, seq_rd: STD_LOGIC_VECTOR(4 DOWNTO 0);
-    signal done_div_i, done_mul_i: std_logic;
+    signal mul_rd,mul_rd_tmp, div_rd,div_rd2,div_rd_tmp, seq_rd, rd2_tmp,rd_to_be_stored: STD_LOGIC_VECTOR(4 DOWNTO 0);
+    signal done_div_i, done_mul_i, div_rd_en: std_logic;
     signal ex_enable: std_logic; --fetch and decode don't need an explicit enable, we can use latch_pc. Execute is different since it needs to stall only on structural stalls
     begin
 
        --Instruction Fetch
 
-        
         register_pc: single_register
             generic map(
                 N => DATA_WIDTH
@@ -255,7 +253,29 @@ architecture struct of DataPath is
               RESET => RST,
               EN => PC_LATCH_EN,
               Q     => pc3
-            );    
+            ); 
+        register_npc: single_register
+            generic map(
+                N => DATA_WIDTH
+                )
+            port map(
+              D     => pc_plus4,
+              CK    => CLK,
+              RESET => RST,
+              EN => PC_LATCH_EN,
+              Q     => npc
+            );
+        register_npc1: single_register
+            generic map(
+                N => DATA_WIDTH
+                )
+            port map(
+              D     => npc,
+              CK    => CLK,
+              RESET => RST,
+              EN => PC_LATCH_EN,
+              Q     => npc1
+            );   
         PC_TO_IRAM<=pc;
         PC_adder: adder
             generic map(
@@ -292,7 +312,7 @@ architecture struct of DataPath is
             reset => rst,
             pc => pc,
             pc_branch => pc2,         
-            branch_taken => branch_taken,
+            branch_taken => branch_taken(0),
             target_branch => jump_addr,
             update => btb_update,
             hit => btb_hit(0),
@@ -310,37 +330,51 @@ architecture struct of DataPath is
             SEL => btb_hit(0),
             Y => pc_btb_mux_out
         );
+        hit_f1(0)<=btb_hit(0) and not((branch_taken(0) or saved_branch_taken(0))xor hit2(0));
         register_hit1: single_register
             generic map(
                 N => 1
                 )
             port map(
-              D     => btb_hit,
+              D     => hit_f1,
               CK    => CLK,
               RESET => RST,
               EN => PC_LATCH_EN,
               Q     => hit1
             );
+        hit_f2(0)<=hit1(0) and not((branch_taken(0) or saved_branch_taken(0))xor hit2(0));
         register_hit2: single_register
             generic map(
                 N => 1
                 )
             port map(   
-              D     => hit1,
+              D     => hit_f2,
               CK    => CLK,
               RESET => RST,
               EN => PC_LATCH_EN,
               Q     => hit2
             );
-        branch_taken<=(not branch_cond_nor_jump) and JUMP_EN;
-        FLUSH<=branch_taken xor hit2(0);
-        restore_pc<=hit2(0) and (not(branch_taken));
+        branch_taken(0)<=(not branch_cond_nor_jump) and JUMP_EN;
+        branch_taken_tmp(0)<=branch_taken(0) and (not(can_read_i) or not(can_write_i));
+        register_savedbranchtaken: single_register
+            generic map(
+                N => 1
+                )
+            port map(   
+              D     => branch_taken_tmp,
+              CK    => CLK,
+              RESET => RST,
+              EN => '1',
+              Q     => saved_branch_taken
+            );
+        FLUSH<=(branch_taken(0) or saved_branch_taken(0))xor hit2(0);
+        restore_pc<=hit2(0) and (not(branch_taken(0)))and (not(saved_branch_taken(0)));
          mux_pc2_pcnext: MUX21_GENERIC
          generic map(
             NBIT => DATA_WIDTH
         )
          port map(
-            A => pc2,
+            A => npc1,
             B => pc_next,
             SEL => restore_pc,
             Y => pc_final
@@ -356,7 +390,7 @@ architecture struct of DataPath is
             CLK => CLK,
             RESET => RST,
             ENABLE => rf_enable,
-            BYTE=>byte_skew,         
+            BYTE=>byte_skew(0),         
             HALF_WORD=>HALF_WORD,
             H_L =>H_L,           
             S_U =>S_U, 		
@@ -409,13 +443,14 @@ architecture struct of DataPath is
             Q => im
         );
 
-        ex_enable<=not(done_mul_i or done_div_i);
+        ex_enable<='1';
+        rd_to_be_stored<=RD and (4 downto 0 => can_read_i) and (4 downto 0 => can_write_i);
          register_rd1: single_register
          generic map(
             N =>ADDR_WIDTH
         )
          port map(
-            D => RD,
+            D => rd_to_be_stored,
             CK => ClK,
             RESET => rst,
             EN => ex_enable,
@@ -493,11 +528,8 @@ architecture struct of DataPath is
             STANDARD_OUT => std_out,
             MUL_OUT => mul_out, 
             DIV_OUT => div_out,
-            DONE_DIV=> done_div_i, 
-            DONE_MUL => done_mul_i
-
+            DONE_DIV=> done_div_i
         );
-        MULTIPLICATION_ENDED<=done_mul_i;
         DIVISION_ENDED<=done_div_i;
         mux_alu_comb_seq: MUX21_GENERIC
 
@@ -556,14 +588,25 @@ architecture struct of DataPath is
             N => ADDR_WIDTH
         )
          port map(
-            D => rd1,
+            D => rd2_tmp,
             CK => CLK,
             RESET => RST,
             EN => '1',
-            Q => mul_stages_rd(0)
+            Q => rd2
         );
         --MEMORY
-        byte_skew<=BYTE;
+        register_byte: single_register
+         generic map(
+            N => 1
+        )
+         port map(
+            D => byte_signal,
+            CK => CLK,
+            RESET => RST,
+            EN => '1',
+            Q => byte_skew
+        );
+        byte_signal(0)<=BYTE;
         DATA_TO_MEM<=me;
         MEM_ADDRESS<=alu_out_reg;
 
@@ -596,14 +639,14 @@ architecture struct of DataPath is
             N => ADDR_WIDTH
         )
          port map(
-            D => mul_stages_rd(0),
+            D => mul_rd_tmp,
             CK => CLK,
             RESET => RST,
-            EN => START_MUL,
-            Q => mul_stages_rd(1)
+            EN => ex_enable,
+            Q => mul_stages_rd(2)
         );
-
-        shift_register_mul_backup: for i in 1 to 7 generate
+        mul_rd_tmp<=rd1 and (4 downto 0 => START_MUL);
+        shift_register_mul_backup: for i in 2 to 7 generate --the ones before aren't needed
           reg_inst: single_register
             generic map(N => ADDR_WIDTH)
             port map(
@@ -614,32 +657,44 @@ architecture struct of DataPath is
               Q     => mul_stages_rd(i+1)
             );
         end generate;
-
         mul_rd <= mul_stages_rd(8);
-
+        done_mul_i<=or_reduce(mul_stages_rd(7));
+        MULTIPLICATION_ENDED<=done_mul_i;
         register_div_backup: single_register
          generic map(
             N => ADDR_WIDTH
         )
          port map(
-            D => rd1,
+            D => div_rd_tmp,
             CK => CLK,
             RESET => RST,
-            EN => START_DIV,
+            EN => div_rd_en,
             Q => div_rd
         );
-       
-
-       CAN_WRITE <= not_equal(RD,div_rd) and not_equal(RD,mul_stages_rd(1)) and not_equal(RD,mul_stages_rd(2)) and not_equal(RD,mul_stages_rd(3)) and not_equal(RD,mul_stages_rd(4)) and 
+        div_rd_tmp<=rd1 and (4 downto 0 => not(done_div_i));
+       div_rd_en<=START_DIV or done_div_i;
+        register_div2_backup: single_register
+         generic map(
+            N => ADDR_WIDTH
+        )
+         port map(
+            D => div_rd,
+            CK => CLK,
+            RESET => RST,
+            EN => '1',
+            Q => div_rd2
+        );
+       can_write_i <= not_equal(RD,div_rd) and not_equal(RD,mul_stages_rd(1)) and not_equal(RD,mul_stages_rd(2)) and not_equal(RD,mul_stages_rd(3)) and not_equal(RD,mul_stages_rd(4)) and 
                    not_equal(RD,mul_stages_rd(5)) and not_equal(RD,mul_stages_rd(6)) and not_equal(RD,mul_stages_rd(7));
 
-       CAN_READ <= not_equal(RS1, rd1) and not_equal(RS2, rd1) and not_equal(RS1, rd2) and not_equal(RS2, rd2) and 
-                   not_equal(RS1, rd3) and not_equal(RS2, rd3) and not_equal(RS1, div_rd) and not_equal(RS2, div_rd) and 
+       can_read_i <=not_equal(RS1, rd1) and not_equal(RS2, rd1) and not_equal(RS1, rd2) and not_equal(RS2, rd2) and 
+                    not_equal(RS1, div_rd) and not_equal(RS2, div_rd) and not_equal(RS1, div_rd2) and not_equal(RS2, div_rd2) and
                    not_equal(RS1, mul_stages_rd(8)) and not_equal(RS2, mul_stages_rd(8)) and not_equal(RS1, mul_stages_rd(7)) and not_equal(RS2, mul_stages_rd(7)) and 
                    not_equal(RS1, mul_stages_rd(6)) and not_equal(RS2, mul_stages_rd(6)) and not_equal(RS1, mul_stages_rd(5)) and not_equal(RS2, mul_stages_rd(5)) and 
                    not_equal(RS1, mul_stages_rd(4)) and not_equal(RS2, mul_stages_rd(4)) and not_equal(RS1, mul_stages_rd(3)) and not_equal(RS2, mul_stages_rd(3)) and 
                    not_equal(RS1, mul_stages_rd(2)) and not_equal(RS2, mul_stages_rd(2)) and not_equal(RS1, mul_stages_rd(1)) and not_equal(RS2, mul_stages_rd(1)); 
-
+        CAN_READ <= can_read_i;
+        CAN_WRITE <= can_write_i;
         mux_rd_comb_seq: MUX21_GENERIC
 
          generic map(
@@ -647,10 +702,10 @@ architecture struct of DataPath is
         )
          port map(
 
-            A => std_rd,
+            A => rd1,
             B => seq_rd,
             SEL => ALU_OUTREG_COMB_SEQ,
-            Y => rd2
+            Y => rd2_tmp
         );
 
         mux_rd_mul_div: MUX21_GENERIC
@@ -661,7 +716,7 @@ architecture struct of DataPath is
          port map(
 
             A => mul_rd,
-            B => div_rd,
+            B => div_rd2,
             SEL => ALU_OUTREG_MUL_DIV,
             Y => seq_rd
         );
