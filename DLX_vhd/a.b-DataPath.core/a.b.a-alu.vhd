@@ -122,7 +122,7 @@ architecture struct of alu is
         signal A_gt_or_eq_B,A_gt_B,A_lt_or_eq_B,A_lt_B,A_eq_B: STD_LOGIC; 
 
         signal div_quotient, div_remainder: STD_LOGIC_VECTOR(DATA_WIDTH -1 downto 0);
-        signal div_start, div_done: STD_LOGIC;
+        signal div_start, div_done,div_done1, div_working: STD_LOGIC;
         signal A_ge_u, A_gt_u, A_le_u, A_lt_u: STD_LOGIC;
     begin
     cin_adder <= '1' when op = ALU_SUB or
@@ -226,7 +226,11 @@ architecture struct of alu is
         begin
             case op is
                 when DIV =>
-                    div_start <='1';
+                    if div_working='0' then
+                        div_start <='1';
+                    else
+                        div_start<='0';
+                    end if;
                 when others => div_start <='0';
                 end case;
             case op is
@@ -318,7 +322,27 @@ architecture struct of alu is
             end case;
         
         end process;
-
+        process (clk,rst)
+        begin
+            if rst='1' then
+                div_working<='0';
+                div_done1<='0';
+            else
+                if rising_edge(clk) then
+                    if div_start='1' then 
+                        div_working<='1';
+                        div_done1<='0';
+                    else 
+                        if div_done='1' then
+                            div_done1<='1';
+                        end if;
+                        if div_done1='1' then
+                            div_working<='0';
+                        end if;
+                    end if;
+                end if;
+            end if;
+        end process;
 
     
 end struct;

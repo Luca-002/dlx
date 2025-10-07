@@ -67,6 +67,14 @@ entity dlx_cu is
 end dlx_cu;
 
 architecture dlx_cu_hw of dlx_cu is
+  function or_reduce(v: std_logic_vector) return std_logic is
+		variable res: std_logic := '0';
+	  begin
+		for i in v'range loop
+		  res := res or v(i);
+		end loop;
+		return res;
+	  end function;
   type mem_array is array (integer range 0 to MICROCODE_MEM_SIZE - 1) of std_logic_vector(CW_SIZE - 1 downto 0);
   signal cw_mem : mem_array := ("111101111110000001010000", -- R type
                                 "111101111110000001010000", -- mul and div
@@ -136,7 +144,7 @@ architecture dlx_cu_hw of dlx_cu is
   signal IR_opcode, IR_opcode1 : std_logic_vector(OP_CODE_SIZE -1 downto 0);  -- OpCode part of IR
   signal IR_func : std_logic_vector(FUNC_SIZE-1 downto 0);   -- Func part of IR when Rtype
   signal cw   : std_logic_vector(CW_SIZE - 1 downto 0); -- full control word read from cw_mem
-
+ 
 
   -- control word is shifted to the correct stage
   signal cw1 : std_logic_vector(CW_SIZE -1 downto 0); -- first stage
@@ -144,7 +152,6 @@ architecture dlx_cu_hw of dlx_cu is
   signal cw3 : std_logic_vector(CW_SIZE - 1 - 5 downto 0); -- third stage
   signal cw4 : std_logic_vector(CW_SIZE - 1 - 9 downto 0); -- fourth stage
   signal cw5 : std_logic_vector(CW_SIZE -1 - 13 downto 0); -- fifth stage
-  signal restore_cw : std_logic;
 
   signal aluOpcode_i: aluOp := NOP; -- ALUOP defined in package
   signal aluOpcode1: aluOp := NOP;
@@ -152,7 +159,7 @@ architecture dlx_cu_hw of dlx_cu is
   signal aluOpcode3: aluOp := NOP;
 
   signal IR_i,IR1: STD_LOGIC_VECTOR(31 downto 0);
-  signal div_working: std_logic;
+  signal div_working,double_div_stall: std_logic;
 begin  -- dlx_cu_rtl
 
   IR_opcode(5 downto 0) <= IR_IN(31 downto 26);
@@ -160,16 +167,16 @@ begin  -- dlx_cu_rtl
   IR_func(FUNC_SIZE-1 downto 0)  <= IR_IN(FUNC_SIZE - 1 downto 0);
 
   cw <= cw_mem(to_integer(unsigned(IR_opcode)));
-
-  IR_LATCH_EN   <=cw1(CW_SIZE - 1) and not(not(CAN_READ) or not(CAN_WRITE) or MULTIPLICATION_ENDED or DIVISION_ENDED);
-  PC_LATCH_EN   <=cw1(CW_SIZE - 2) and not(not(CAN_READ) or not(CAN_WRITE) or MULTIPLICATION_ENDED or DIVISION_ENDED);
+  double_div_stall<=div_working and not (or_reduce(aluOpcode1 xor DIV));
+  IR_LATCH_EN   <=cw1(CW_SIZE - 1) and not(not(CAN_READ) or not(CAN_WRITE) or MULTIPLICATION_ENDED or DIVISION_ENDED  or double_div_stall);
+  PC_LATCH_EN   <=cw1(CW_SIZE - 2) and not(not(CAN_READ) or not(CAN_WRITE) or MULTIPLICATION_ENDED or DIVISION_ENDED or double_div_stall);
   --DE 
-  RegA_LATCH_EN <=cw2(CW_SIZE - 3)  and not(not(CAN_READ) or not(CAN_WRITE) or MULTIPLICATION_ENDED or DIVISION_ENDED);
-  RegB_LATCH_EN <=cw2(CW_SIZE - 4)  and not(not(CAN_READ) or not(CAN_WRITE) or MULTIPLICATION_ENDED or DIVISION_ENDED);
-  RegIMM_LATCH_EN<=cw2(CW_SIZE - 5) and not(not(CAN_READ) or not(CAN_WRITE) or MULTIPLICATION_ENDED or DIVISION_ENDED);
-  RFR1_EN       <=cw2(CW_SIZE - 6)  and not(not(CAN_READ) or not(CAN_WRITE) or MULTIPLICATION_ENDED or DIVISION_ENDED);
-  RFR2_EN       <=cw2(CW_SIZE - 7)  and not(not(CAN_READ) or not(CAN_WRITE) or MULTIPLICATION_ENDED or DIVISION_ENDED);
-  RF_EN         <=cw2(CW_SIZE - 8)  and not(not(CAN_READ) or not(CAN_WRITE) or MULTIPLICATION_ENDED or DIVISION_ENDED);
+  RegA_LATCH_EN <=cw2(CW_SIZE - 3)  and not(not(CAN_READ) or not(CAN_WRITE) or MULTIPLICATION_ENDED or DIVISION_ENDED or double_div_stall);
+  RegB_LATCH_EN <=cw2(CW_SIZE - 4)  and not(not(CAN_READ) or not(CAN_WRITE) or MULTIPLICATION_ENDED or DIVISION_ENDED or double_div_stall);
+  RegIMM_LATCH_EN<=cw2(CW_SIZE - 5) and not(not(CAN_READ) or not(CAN_WRITE) or MULTIPLICATION_ENDED or DIVISION_ENDED or double_div_stall);
+  RFR1_EN       <=cw2(CW_SIZE - 6)  and not(not(CAN_READ) or not(CAN_WRITE) or MULTIPLICATION_ENDED or DIVISION_ENDED or double_div_stall);
+  RFR2_EN       <=cw2(CW_SIZE - 7)  and not(not(CAN_READ) or not(CAN_WRITE) or MULTIPLICATION_ENDED or DIVISION_ENDED or double_div_stall);
+  RF_EN         <=cw2(CW_SIZE - 8)  and not(not(CAN_READ) or not(CAN_WRITE) or MULTIPLICATION_ENDED or DIVISION_ENDED or double_div_stall);
   --EX 
  
   ALU_OUTREG_EN <=cw3(CW_SIZE - 9) ;
