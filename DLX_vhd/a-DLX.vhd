@@ -59,7 +59,6 @@ architecture dlx_rtl of DLX is
         CLK                     : in std_logic;
 		RST                     : in std_logic;    
         --IF
-        IR_LATCH_EN        : in std_logic;
         PC_LATCH_EN        : in std_logic; 
         PC_TO_IRAM               : out std_logic_vector(DATA_WIDTH-1 downto 0);
         FLUSH               : out std_logic;
@@ -119,7 +118,7 @@ architecture dlx_rtl of DLX is
     OP_CODE_SIZE       :     integer := 6;  -- Op Code Size
     -- ALU_OPC_SIZE       :     integer := 6;  -- ALU Op Code Word Size
     IR_SIZE            :     integer := 32;  -- Instruction Register Size    
-    CW_SIZE            :     integer := 24);  -- Control Word Size
+    CW_SIZE            :     integer := 23);  -- Control Word Size
   port (
     Clk                : in  std_logic;  -- Clock
     Rst                : in  std_logic;  -- Reset:Active-Low
@@ -128,7 +127,6 @@ architecture dlx_rtl of DLX is
 
     IR_IN              : in std_logic_vector(31 downto 0);
     --IF
-    IR_LATCH_EN        : out std_logic;
     PC_LATCH_EN        : out std_logic; 
     FLUSH               : in std_logic;
     --DE
@@ -175,7 +173,6 @@ architecture dlx_rtl of DLX is
 
   end component;
   signal IRam_DOut : std_logic_vector(IR_SIZE - 1 downto 0);
-  signal IR_LATCH_EN_i : std_logic;
   signal NPC_LATCH_EN_i : std_logic;
   signal RegA_LATCH_EN_i : std_logic;
   signal RegB_LATCH_EN_i : std_logic;
@@ -238,7 +235,7 @@ architecture dlx_rtl of DLX is
 
   DRAM_I: DRAM
     generic map (
-      ADDR_WIDTH => 16,  --IMPORTANT: change for synthesis
+      ADDR_WIDTH => 16, 
       DATA_WIDTH => 32
     )
     port map (
@@ -261,7 +258,6 @@ architecture dlx_rtl of DLX is
       RST => Rst,
 
       -- IF
-      IR_LATCH_EN     => IR_LATCH_EN_i,
       PC_LATCH_EN     => PC_LATCH_EN_i,
       PC_TO_IRAM      => PC_TO_IRAM_sig,
       FLUSH           => FLUSH_sig,
@@ -320,7 +316,7 @@ architecture dlx_rtl of DLX is
       FUNC_SIZE => 11,
       OP_CODE_SIZE => 6,
       IR_SIZE => 32,
-      CW_SIZE => 24
+      CW_SIZE => 23
     )
     port map (
       Clk   => Clk,
@@ -328,7 +324,6 @@ architecture dlx_rtl of DLX is
       IR_IN => IRam_DOut,
 
       -- IF
-      IR_LATCH_EN   => IR_LATCH_EN_i,
       PC_LATCH_EN   => PC_LATCH_EN_i,
       FLUSH         => FLUSH_sig, 
 

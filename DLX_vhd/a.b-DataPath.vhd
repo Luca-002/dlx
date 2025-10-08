@@ -12,7 +12,6 @@ entity DataPath is
         CLK 					: in std_logic;
 		RST 					: in std_logic;	
         --IF
-        IR_LATCH_EN        : in std_logic;
         PC_LATCH_EN        : in std_logic; 
         PC_TO_IRAM               : out std_logic_vector(DATA_WIDTH-1 downto 0);
         FLUSH               : out std_logic;

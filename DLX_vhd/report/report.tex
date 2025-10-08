@@ -1,5 +1,6 @@
-\documentclass[a4paper,12pt]{report}
-
+\documentclass[a4paper,12pt]{article}
+\usepackage{booktabs} 
+\usepackage{array}
 
 \usepackage[utf8]{inputenc}
 \usepackage{graphicx}
@@ -40,5 +41,46 @@
     \vfill
     {\large \today\par}
 \end{titlepage}
+\section{Intruduction}
+The project consists in the creation of a dlx processor in vhdl.
+The dlx is a RISC processor with a Harvard architecture, which means that it uses two different memories for data and instructions.
+The processor is organized in a five-stage pipeline. At instruction fetch (IF) the control unit reads the current instruction pointed to by the PC; decode (DE) reads the register file and prepares operands and immediates; execute (EX) performs ALU operations; memory (MEM) performs data memory accesses; and writeback (WB) updates the register file.\\
 
+\section{Control Unit}
+We used a hardwired control unit with a 23-bits control word
+\begin{table}[ht]
+  \centering
+  \small
+  \caption{Control signals and their meanings}
+  \label{tab:control-signals}
+  \begin{tabular}{@{}l p{0.72\textwidth}@{}}
+    \toprule
+    \textbf{Signal} & \textbf{Meaning} \\
+    \midrule
+    PC\_LATCH\_EN     & Enables updating of the program counter (PC) register. \\
+    RegA\_LATCH\_EN   & Enables the register containing the first operand in I and R type instructions. \\
+    RegB\_LATCH\_EN   & Enables the register containing the second operand in R type instructions. \\
+    RegIMM\_LATCH\_EN & Enables the register containing the immediate value in I and J type instructions.. \\
+    RFR1\_EN          & Enables read signal for register-file read port 1 (reads operand A). \\
+    RFR2\_EN          & Enables read signal for register-file read port 2 (reads operand B). \\
+    RF\_EN            & Global register-file enable. \\
+    ALU\_OUTREG\_EN   & Enables saving of the ALU result into the ALU output register for the next stage. \\
+    MUX\_B            & Selects signal for the ALU second operand multiplexer (e.g. choose between RegB / immediate). \\
+    MUX\_A            & Selects signal for the ALU A second operand multiplexer (e.g. choose between RegA / PC). \\
+    MEM\_LATCH\_EN    & Enables saving of address/data into the memory-stage pipeline register. \\
+    EQ\_COND          & Equality condition (used for branching). \\
+    JUMP\_EN          & Enables jumping (true for both jumps and branches). \\
+    JUMP              & Indicates that a jump needs to be performed instead of a branch. \\
+    BYTE              & Select byte-sized memory access (8-bit load/store). \\
+    DRAM\_WE          & DRAM write enable. \\
+    LMD\_LATCH\_EN    & Enables the memory register. \\
+    SEL\_MEM\_ALU     & Select between memory data and ALU result for the write-back. \\
+    RF\_WE            & Register-file write enable. \\
+    JAL               & needed for the JAL instruction. \\
+    HALF\_WORD        & Select half-word memory access (16-bit load/store). \\
+    H\_L               & High/Low half/byte selector (chooses high-half vs low-half or upper vs lower byte when writing). \\
+    S\_U              & Sign/Unsigned control for load and store: chooses between sign-extension (signed) or zero-extension (unsigned). \\
+    \bottomrule
+  \end{tabular}
+\end{table}
 \end{document}
