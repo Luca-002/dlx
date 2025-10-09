@@ -8,7 +8,7 @@
 \geometry{margin=1in}
 \usepackage{setspace}
 \usepackage{titling}
-
+\usepackage{adjustbox}
 
 \pagenumbering{gobble}
 
@@ -145,6 +145,12 @@ We used a hardwired control unit with a 23-bits control word
   \end{tabular}
 \end{table}
 \section{Datapath}
+\begin{figure}[htbp]
+    \centering
+    \includegraphics[angle=90,width=\textwidth,height=0.9\textheight,keepaspectratio]{images/dlx.png}
+    \caption{schematic of the entire datapath}
+    \label{fig:your_label}
+\end{figure}
 The datapath forms the structural backbone of the processor. Its components are:
 \begin{itemize}
     \item \textbf{Branch Target Buffer (BTB):} saves recently encountered branches and respective targets, enabling the program counter to jump immediately when seeing a branch or jump, thus reducing stalls.
@@ -156,6 +162,9 @@ The datapath forms the structural backbone of the processor. Its components are:
     \item \textbf{Pipeline / Skew Registers:} small registers inserted between pipeline stages or to skew signals and align timing. These registers are also used for hazard detection.
 \end{itemize}
 \subsection{Branch Target Buffer (BTB)}
+\begin{figure}[h!]
+  \includegraphics{images/BTB.png}
+\end{figure}
 The BTB follows a simple prediction algorithm based on the last observed behavior of each branch. Whenever a branch or jump instruction is executed, the BTB entry corresponding to its program counter (PC) is updated with the new outcome — either \textit{taken} or \textit{not taken}. On subsequent encounters of the same instruction, the processor consults the BTB and uses the most recent prediction to decide whether to fetch from the branch target address or continue sequentially.
 This one-bit prediction strategy may mispredict alternating branches, but it performs well for branches with stable behavior, such as loops.
 \subsection{ALU}
@@ -165,6 +174,16 @@ The adder is based on the adder from the Pentium4.
 \subsubsection{comparator}
 \subsubsection{multiplier}
 \subsubsection{divider}
+\section{Testing}
+The tests have been conducted using 3 assembly programs:
+\begin{itemize}
+  \item \textbf{BTB\_test}: stores an array in memory, then loads each element and performs several operations (e.g., computing the maximum value, counting the number of negative elements, etc.). This test is designed to verify the correct functioning of the BTB by including a large number of branches (both forward and backward) as well as alternating branch directions.
+  
+  \item \textbf{mul\_div\_test}: a simple program that performs two multiplications in parallel, followed by two divisions where the second division is expected to stall.
+  
+  \item \textbf{all\_test}: tests the entire instruction set.
+\end{itemize}
+Each test verifies the correctness of the operations performed. If all tests pass, a success flag is raised.
 \section{Physical Synthesis}
 \subsection{Synthesis}
 \subsection{Place and route}
