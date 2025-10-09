@@ -1,7 +1,7 @@
 \documentclass[a4paper,12pt]{article}
 \usepackage{booktabs} 
 \usepackage{array}
-
+\usepackage{longtable}
 \usepackage[utf8]{inputenc}
 \usepackage{graphicx}
 \usepackage{geometry}
@@ -45,7 +45,68 @@
 The project consists in the creation of a dlx processor in vhdl.
 The dlx is a RISC processor with a Harvard architecture, which means that it uses two different memories for data and instructions.
 The processor is organized in a five-stage pipeline. At instruction fetch (IF) the control unit reads the current instruction pointed to by the PC; decode (DE) reads the register file and prepares operands and immediates; execute (EX) performs ALU operations; memory (MEM) performs data memory accesses; and writeback (WB) updates the register file.\\
-
+It has 3 different types of instructions: 
+\begin{table}[ht]
+\centering
+\begin{tabular}{|c|p{8cm}|}
+\hline
+\textbf{Instruction Type} & \textbf{Description and Example} \\
+\hline
+\textbf{R-type} & Instructions that operate on two source registers and store the result in a destination register. Example: \texttt{add \$r1, \$r2, \$r3} \\
+\hline
+\textbf{I-type} & Instructions that involve a register and an immediate value. Used for arithmetic with constants, memory access, and branching. Example: \texttt{addi \$r1, \$r2, 10} \\
+\hline
+\textbf{J-type} & Instructions perform unconditional jumps. Example: \texttt{j 40} \\
+\hline
+\end{tabular}
+\caption{DLX Processor Instruction Types}
+\end{table}\\
+The complete implemented instruction set is the following:
+\begin{table}[h!]
+\centering
+\caption{Implemented Instructions with Opcodes and Function Codes}
+\begin{tabular}{|l|c|l|c|l|c|}
+\hline
+\textbf{I/J-type} & \textbf{Opcode} & \textbf{Int R-type} & \textbf{Func} & \textbf{Float R-type} & \textbf{Func} \\
+\hline
+j       & 0x02 & sll   & 0x02 & multf & 0x02 \\
+jal     & 0x03 & srl   & 0x03 & divf  & 0x03 \\
+beqz    & 0x04 & sra   & 0x07 &  &  \\
+bnez    & 0x05 & add   & 0x20 &  &  \\
+addi    & 0x08 & addu  & 0x21 &  &  \\
+addui   & 0x09 & sub   & 0x22 &  &  \\
+subi    & 0x0a & subu  & 0x23 &  &  \\
+subui   & 0x0b & and   & 0x24 &  &  \\
+andi    & 0x0c & or    & 0x25 &  &  \\
+ori     & 0x0d & xor   & 0x26 &  &  \\
+xori    & 0x0e & seq   & 0x28 &  &  \\
+lhi     & 0x0f & sne   & 0x29 &  &  \\
+jr      & 0x12 & slt   & 0x2a &  &  \\
+jalr    & 0x13 & sgt   & 0x2b &  &  \\
+slli    & 0x14 & sle   & 0x2c &  &  \\
+nop     & 0x15 & sge   & 0x2d &  &  \\
+srli    & 0x16 & mult  & 0x0e &  &  \\
+srai    & 0x17 & div   & 0x0f &  &  \\
+seqi    & 0x18 & sltu  & 0x3a &  &  \\
+snei    & 0x19 & sgtu  & 0x3b &  &  \\
+slti    & 0x1a & sgeu  & 0x3d &  &  \\
+sgti    & 0x1b &       &      &  &  \\
+slei    & 0x1c &       &      &  &  \\
+sgei    & 0x1d &       &      &  &  \\
+lb      & 0x20 &       &      &  &  \\
+lbu     & 0x24 &       &      &  &  \\
+lhu     & 0x25 &       &      &  &  \\
+lw      & 0x23 &       &      &  &  \\
+sb      & 0x28 &       &      &  &  \\
+sw      & 0x2b &       &      &  &  \\
+sltui   & 0x3a &       &      &  &  \\
+sgtui   & 0x3b &       &      &  &  \\
+sleui   & 0x3c &       &      &  &  \\
+sgeui   & 0x3d &       &      &  &  \\
+\hline
+\end{tabular}
+\end{table}
+\clearpage
 \section{Control Unit}
 We used a hardwired control unit with a 23-bits control word
 \begin{table}[ht]
@@ -83,4 +144,28 @@ We used a hardwired control unit with a 23-bits control word
     \bottomrule
   \end{tabular}
 \end{table}
+\section{Datapath}
+The datapath forms the structural backbone of the processor. Its components are:
+\begin{itemize}
+    \item \textbf{Branch Target Buffer (BTB):} saves recently encountered branches and respective targets, enabling the program counter to jump immediately when seeing a branch or jump, thus reducing stalls.
+    
+    \item \textbf{Register File:} an array of registers with two asynchronous read ports and one synchronous write port.
+    
+    \item \textbf{Arithmetic Logic Unit (ALU):} performs integer arithmetic, bitwise logic, shift, comparison operations, multiplications, and divisions.
+    
+    \item \textbf{Pipeline / Skew Registers:} small registers inserted between pipeline stages or to skew signals and align timing. These registers are also used for hazard detection.
+\end{itemize}
+\subsection{Branch Target Buffer (BTB)}
+The BTB follows a simple prediction algorithm based on the last observed behavior of each branch. Whenever a branch or jump instruction is executed, the BTB entry corresponding to its program counter (PC) is updated with the new outcome — either \textit{taken} or \textit{not taken}. On subsequent encounters of the same instruction, the processor consults the BTB and uses the most recent prediction to decide whether to fetch from the branch target address or continue sequentially.
+This one-bit prediction strategy may mispredict alternating branches, but it performs well for branches with stable behavior, such as loops.
+\subsection{ALU}
+The ALU is composed of several components: adder, comparator, pipelined multiplier, shifter and divider.
+\subsubsection{adder}
+The adder is based on the adder from the Pentium4.
+\subsubsection{comparator}
+\subsubsection{multiplier}
+\subsubsection{divider}
+\section{Physical Synthesis}
+\subsection{Synthesis}
+\subsection{Place and route}
 \end{document}
