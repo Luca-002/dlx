@@ -19,5 +19,5 @@ This repository contains an implementation of a pipelined DLX-style processor da
 ### Architecture diagram
 
 
-![DLX architecture](DLX_vhd\report\images\dlx.png)
+![DLX architecture](./DLX_vhd\report\images\dlx.png)
 
