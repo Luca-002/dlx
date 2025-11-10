@@ -5,7 +5,7 @@ xor r2, r2, r2
 ciclo:
 lw r3, 0(r2)
 addi r3, r3, 10
-sw 100(r2), r3
+sw 0(r2), r3
 subi r1, r1, 1
 addi r2, r2, 4
 bnez r1, ciclo

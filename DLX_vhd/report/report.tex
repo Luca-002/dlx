@@ -9,7 +9,8 @@
 \usepackage{setspace}
 \usepackage{titling}
 \usepackage{adjustbox}
-
+\usepackage{algorithm}
+\usepackage{algpseudocode} 
 \pagenumbering{gobble}
 
 \begin{document}
@@ -32,7 +33,7 @@
         \begin{tabbing}
         \hspace{6cm} \= \kill
         \textbf{Student:} Luca Genca \hspace{1.5cm} \= \textbf{Student:} Alessio Delli Colli \\
-        \textbf{ID:} XXXXXXX \> \textbf{ID:} YYYYYYY \\
+        \textbf{ID:} s345156 \> \textbf{ID:} YYYYYYY \\
         \end{tabbing}
     \end{flushleft}
     
@@ -149,7 +150,7 @@ We used a hardwired control unit with a 23-bits control word
     \centering
     \includegraphics[angle=90,width=\textwidth,height=0.9\textheight,keepaspectratio]{images/dlx.png}
     \caption{schematic of the entire datapath}
-    \label{fig:your_label}
+    \label{fig:entire_dlx}
 \end{figure}
 The datapath forms the structural backbone of the processor. Its components are:
 \begin{itemize}
@@ -168,12 +169,94 @@ The datapath forms the structural backbone of the processor. Its components are:
 The BTB follows a simple prediction algorithm based on the last observed behavior of each branch. Whenever a branch or jump instruction is executed, the BTB entry corresponding to its program counter (PC) is updated with the new outcome — either \textit{taken} or \textit{not taken}. On subsequent encounters of the same instruction, the processor consults the BTB and uses the most recent prediction to decide whether to fetch from the branch target address or continue sequentially.
 This one-bit prediction strategy may mispredict alternating branches, but it performs well for branches with stable behavior, such as loops.
 \subsection{ALU}
-The ALU is composed of several components: adder, comparator, pipelined multiplier, shifter and divider.
-\subsubsection{adder}
-The adder is based on the adder from the Pentium4.
+The ALU is composed of several components: adder, comparator,logic unit, pipelined multiplier, shifter and divider.
+\subsubsection{Adder}
+
+The adder used in the ALU is based on the Pentium~4 adder architecture.
+
+\begin{figure}[h]
+  \centering
+  \includegraphics{images/p4_adder.png}
+  \caption{Pentium 4 adder structure}
+\end{figure}
+
+It is composed of two main parts:
+\begin{enumerate}
+  \item a sparse carry-generation tree, which computes the carries using group propagate and generate signals;
+  \item a carry-select stage, which uses the carries from the sparse tree to select the correct partial sums.
+\end{enumerate}
+
+The sparse tree makes use of two types of blocks, \textbf{GP} and \textbf{G}, whose outputs are computed recursively as:
+\[
+G_{i:j} = G_{i:k} + P_{i:k} \cdot G_{k-1:j}
+\]
+\[
+P_{i:j} = P_{i:k} \cdot P_{k-1:j}
+\]
+
+\begin{figure}[h!]
+  \centering
+  \includegraphics[width=0.8\textwidth, keepaspectratio]{images/pg_network.png}
+  \caption{Structure of the propagate/generate network}
+\end{figure}
+The carry-select block consists of several small ripple-carry adders (RCAs). Each RCA computes the partial sum assuming both possible carry-in values (0 and 1).A multiplexer then selects the correct partial sum based on the carry provided by the sparse tree.
+\begin{figure}[h!]
+  \centering
+  \includegraphics[width=\textwidth, keepaspectratio]{images/carry_select.png}
+  \caption{Carry-select block}
+\end{figure}
+\subsubsection{Multiplier}
+The multiplier is based on the Booth algorithm. The second operand is partitioned into groups, resulting in $N/2$ groups for an $N$-bit operand. Each group is processed by a Booth encoder, which determines the corresponding operation (e.g., $0$, $\pm A$, or $\pm 2A$).
+\begin{figure}[h!]
+  \centering
+  \includegraphics{images/encoder.png}
+  \caption{Booth encoder}
+\end{figure}
+The partial products selected by the encoders are then forwarded to a pipeline of adders. These adders accumulate the partial results, with multiplexers selecting the appropriate input based on the encoder outputs. 
+Pipeline registers are inserted between stages to reduce the critical path and allow the multiplier to operate at a higher clock frequency.
+\begin{figure}[h!]
+  \centering
+  \includegraphics[width=0.8\textwidth, keepaspectratio]{images/booth.png}
+  \caption{Booth multiplier structure}
+\end{figure}
+
 \subsubsection{comparator}
-\subsubsection{multiplier}
+The comparator computes all signed and unsigned comparison conditions required by the DLX. It receives as inputs the operands $A$ and $B$, the sum produced by the ALU adder ($A - B$), and the carry-out bit. 
+From these signals, the unit derives both signed and unsigned comparison flags.
+To detect equality, the comparator checks if all bits of $A-B$ are zero. 
+Signed comparisons are based on the sign of the subtraction result and the arithmetic overflow condition. The sign bits of $A$, $B$, and the result are used to compute the overflow flag, which is then combined with the result's sign to determine whether $A < B$. The remaining signed conditions ($A \le B$, $A > B$, $A \ge B$) are derived from the previous relation and the zero flag.
+Unsigned comparisons rely solely on the carry-out from the subtraction. 
+Since $A < B$ in unsigned arithmetic if and only if the subtraction does not generate a carry, the unit can compute unsigned relations directly from the carry bit and the zero flag. Overall, the comparator generates nine outputs: equality, less-than, greater-than, and the corresponding signed and unsigned variants, using only simple combinational logic.
+\subsubsection{Logic unit}
+The logic unit is based on the logic unit of the T2, which means that it contains two layers of nand gates.
+\begin{figure}[h!]
+  \centering
+  \includegraphics[width=0.7\textwidth, keepaspectratio]{images/logic_unit.png}
+\end{figure}
 \subsubsection{divider}
+The divider is implemented using the non-restoring division algorithm. This method iteratively updates the remainder by adding or subtracting the shifted divisor depending on the sign of the current partial remainder. At each step, one quotient bit is generated: a positive remainder selects $+1$, while a negative remainder selects $-1$. The remainder is then doubled and corrected by subtracting or adding the divisor.
+After $n$ iterations, the quotient is obtained.This quotient however uses $+1$ and $-1$ as digits, so it needs to be converted to binary. 
+This approach avoids the need to restore the remainder during intermediate steps, simplifying the hardware and improving performance.
+\begin{algorithm}[H]
+\caption{Non-Restoring Division}
+\begin{algorithmic}[1]
+\State $R \gets N$
+\State $D \gets D \ll n$
+\For{$i = n-1$ down to $0$}
+    \If{$R \ge 0$}
+        \State $q(i) \gets +1$
+        \State $R \gets 2R - D$
+    \Else
+        \State $q(i) \gets -1$
+        \State $R \gets 2R + D$
+    \EndIf
+\EndFor
+\end{algorithmic}
+\end{algorithm}
+\begin{figure}[h!]
+  \centering
+  \includegraphics[width=0.7\textwidth, keepaspectratio]{images/divider.png}
+\end{figure}
 \section{Testing}
 The tests have been conducted using 3 assembly programs:
 \begin{itemize}

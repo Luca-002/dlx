@@ -23,7 +23,7 @@
         beqz    r30, fail
 
         ; addu / addui / subu / subui (unsigned variants)
-        addui   r6, r0, 0xFFFFFFFF ; r6 = -1 unsigned (if immediate allowed)
+        addui   r6, r0, 0xFFFFFFFF ; r6 = -1 unsigned 
         addi    r7, r0, 1
         addu    r8, r6, r7        ; r8 = 0 (wrap-around)
         addi    r17, r0, 0
