@@ -219,6 +219,9 @@ Pipeline registers are inserted between stages to reduce the critical path and a
   \includegraphics[width=0.8\textwidth, keepaspectratio]{images/booth.png}
   \caption{Booth multiplier structure}
 \end{figure}
+\subsubsection{Shifter}
+The shifter is implemented as a barrel shifter, allowing shifts of any amount to be performed in a single cycle. The design is organized in a series of stages, each responsible for shifting by a power of two (1, 2, 4, 8, \ldots). At each stage, multiplexers select either the shifted or unshifted version of the operand based on the corresponding bit of the shift amount. 
+
 
 \subsubsection{comparator}
 The comparator computes all signed and unsigned comparison conditions required by the DLX. It receives as inputs the operands $A$ and $B$, the sum produced by the ALU adder ($A - B$), and the carry-out bit. 
@@ -232,6 +235,7 @@ The logic unit is based on the logic unit of the T2, which means that it contain
 \begin{figure}[h!]
   \centering
   \includegraphics[width=0.7\textwidth, keepaspectratio]{images/logic_unit.png}
+  \caption{logic unit}
 \end{figure}
 \subsubsection{divider}
 The divider is implemented using the non-restoring division algorithm. This method iteratively updates the remainder by adding or subtracting the shifted divisor depending on the sign of the current partial remainder. At each step, one quotient bit is generated: a positive remainder selects $+1$, while a negative remainder selects $-1$. The remainder is then doubled and corrected by subtracting or adding the divisor.
