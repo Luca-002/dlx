@@ -10,6 +10,8 @@
 \usepackage{titling}
 \usepackage{adjustbox}
 \usepackage{algorithm}
+\usepackage{newunicodechar}
+\newunicodechar{≈}{\approx}
 \usepackage{algpseudocode} 
 \pagenumbering{gobble}
 
@@ -33,7 +35,7 @@
         \begin{tabbing}
         \hspace{6cm} \= \kill
         \textbf{Student:} Luca Genca \hspace{1.5cm} \= \textbf{Student:} Alessio Delli Colli \\
-        \textbf{ID:} s345156 \> \textbf{ID:} YYYYYYY \\
+        \textbf{ID:} s345156 \> \textbf{ID:} s345701 \\
         \end{tabbing}
     \end{flushleft}
     
@@ -62,7 +64,7 @@ It has 3 different types of instructions:
 \end{tabular}
 \caption{DLX Processor Instruction Types}
 \end{table}\\
-The complete implemented instruction set is the following:
+The complete implemented instruction set is the following table:
 \begin{table}[h!]
 \centering
 \caption{Implemented Instructions with Opcodes and Function Codes}
@@ -107,6 +109,13 @@ sgeui   & 0x3d &       &      &  &  \\
 \hline
 \end{tabular}
 \end{table}
+\subsection{Pro features}
+The pro features we have implemented are:
+\begin{itemize}
+    \item extended instruction set (including division)
+    \item branch prediction unit
+    \item Hazard control with the use of stalls
+\end{itemize}
 \clearpage
 \section{Control Unit}
 We used a hardwired control unit with a 23-bits control word
@@ -186,7 +195,7 @@ It is composed of two main parts:
   \item a carry-select stage, which uses the carries from the sparse tree to select the correct partial sums.
 \end{enumerate}
 
-The sparse tree makes use of two types of blocks, \textbf{GP} and \textbf{G}, whose outputs are computed recursively as:
+The sparse tree makes use of two types of blocks, \textbf{PG} and \textbf{G}, whose outputs are computed recursively as:
 \[
 G_{i:j} = G_{i:k} + P_{i:k} \cdot G_{k-1:j}
 \]
@@ -219,9 +228,6 @@ Pipeline registers are inserted between stages to reduce the critical path and a
   \includegraphics[width=0.8\textwidth, keepaspectratio]{images/booth.png}
   \caption{Booth multiplier structure}
 \end{figure}
-\subsubsection{Shifter}
-The shifter is implemented as a barrel shifter, allowing shifts of any amount to be performed in a single cycle. The design is organized in a series of stages, each responsible for shifting by a power of two (1, 2, 4, 8, \ldots). At each stage, multiplexers select either the shifted or unshifted version of the operand based on the corresponding bit of the shift amount. 
-
 
 \subsubsection{comparator}
 The comparator computes all signed and unsigned comparison conditions required by the DLX. It receives as inputs the operands $A$ and $B$, the sum produced by the ALU adder ($A - B$), and the carry-out bit. 
@@ -235,7 +241,6 @@ The logic unit is based on the logic unit of the T2, which means that it contain
 \begin{figure}[h!]
   \centering
   \includegraphics[width=0.7\textwidth, keepaspectratio]{images/logic_unit.png}
-  \caption{logic unit}
 \end{figure}
 \subsubsection{divider}
 The divider is implemented using the non-restoring division algorithm. This method iteratively updates the remainder by adding or subtracting the shifted divisor depending on the sign of the current partial remainder. At each step, one quotient bit is generated: a positive remainder selects $+1$, while a negative remainder selects $-1$. The remainder is then doubled and corrected by subtracting or adding the divisor.
@@ -273,5 +278,62 @@ The tests have been conducted using 3 assembly programs:
 Each test verifies the correctness of the operations performed. If all tests pass, a success flag is raised.
 \section{Physical Synthesis}
 \subsection{Synthesis}
-\subsection{Place and route}
+
+\begin{figure}[h!]
+  \centering
+  \includegraphics[width=0.8\textwidth, keepaspectratio]{images/schematic.png}
+  \caption{Top-level view of the synthesized architecture}
+\end{figure}
+
+The design was synthesized using a script developed for Design Vision.
+The script analyzes all source files, elaborates a container module that gathers the components to be synthesized, and then generates the timing and power reports along with all files required by the subsequent CAD flow.
+The container module includes the control unit and the datapath, but excludes both the instruction RAM and the data RAM.
+The system clock period was set to 3 ns.
+
+\subsection{Place and Route}
+
+After synthesis, the following steps were performed in the CAD tool to obtain the final layout:
+
+\begin{enumerate}
+    \item \textbf{Floorplan definition:} Innovus divides the available area into the region allocated for standard cells and the region dedicated to power distribution.
+    \item \textbf{Insertion of power rings and stripes:} these structures connect VDD and GND to all cells.
+    \item \textbf{Cell placement:} the standard cells are positioned within the defined placement region while avoiding the layers reserved for power delivery.
+    \item \textbf{Signal routing:} the interconnections between cells are created, primarily using the lower metal layers.
+\end{enumerate}
+
+\begin{figure}[h!]
+  \centering
+  \includegraphics[width=0.8\textwidth, keepaspectratio]{images/place_and_route.png}
+  \caption{Connections in the final design}
+\end{figure}
+
+\subsection{Reports Analisys}
+
+\begin{itemize}
+\item The \textbf{Area report} (DLX\_NO\_RAM.gateCount) shows a relatively large total area of 59\,729.5\,\textmu m$^{2}$. 
+      This is mainly due to a small number of modules that dominate the silicon footprint. 
+      In particular, the \textbf{four largest contributors} are the following:
+
+      \begin{itemize}
+          \item \textbf{Branch Target Buffer} — by far the largest block, with an area of 31\,551.9\,\textmu m$^{2}$, representing more than half of the entire design.  
+                Its size is due to the large number of entries required for branch prediction.
+         
+          \item \textbf{Register File} — the multi-ported register file requires 9\,051.4\,\textmu m$^{2}$, contributing significantly due to its storage density and multiple read/write ports.
+          \item \textbf{Divider unit} — although included within the ALU hierarchy, it alone accounts for 3\,567.9\,\textmu m$^{2}$ and stands as one of the largest individual computational blocks.
+          \item \textbf{Multiplier unit} — also within the ALU hierarchy, it requires 8\,214.1\,\textmu m$^{2}$ and is the second most area-expensive computational block after the BTB.
+      \end{itemize}
+
+      Combining these large units (BTB, ALU with multiplier and divider, and the register file) explains the substantial total area of the synthesized design.
+
+      \item The \textbf{Power report} (power.txt) shows that with the chosen clock frequency of 333mhz and the 90nm technology used the total power consumed 
+      amounts to 30.93 mW.
+
+        The power is distributed as 19.17\,mW (62\%) internal, 10.58\,mW (34\%) switching, and 1.18\,mW (4\%) leakage.  
+        Sequential logic dominates power usage (49\%), followed by combinational logic (37\%) and the clock tree (14\%).
+       
+
+      \item The \textbf{Timing report} (DLX\_NO\_RAM\_postRoute.slk) shows a positive slack for all possible paths, so no violations in these regards.
+      More specifically the lowest slack is 0.593 and this suggests that the clock frequency has room for improvement.
+\end{itemize}
+
 \end{document}
